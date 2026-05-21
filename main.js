@@ -313,6 +313,7 @@ class Sunseeker extends utils.Adapter {
     async request(method, path, headers, data) {
         const base = this.getBase();
         const url = `${base.url}${path}`;
+        this.log.debug(`HTTP ${method} ${path}`);
         const res = await axios({
             method,
             url,
@@ -321,6 +322,7 @@ class Sunseeker extends utils.Adapter {
             timeout: 15000,
             validateStatus: () => true,
         });
+        this.log.debug(`HTTP ${method} ${path} -> ${res.status}`);
         if (res.status === 401) {
             this.log.warn("HTTP 401 - Token wird erneuert");
             await this.refreshToken();
@@ -446,6 +448,7 @@ class Sunseeker extends utils.Adapter {
             this.config.apptype === "Old"
                 ? "/mower/device-user/list"
                 : "/app_wireless_mower/device-user/getCustomDevice?all=true";
+        this.log.debug(`loadDevices: ${path}`);
         const { json } = await this.request("GET", path, {
             "Content-Type": "application/json",
             ...this.authHeaders(),
@@ -454,6 +457,7 @@ class Sunseeker extends utils.Adapter {
             this.log.warn(`Geräteliste leer: ${JSON.stringify(json)}`);
             return;
         }
+        this.log.debug(`loadDevices: ${json.data.length} Gerät(e) gefunden`);
         for (const d of json.data) {
             const sn = d.deviceSn;
             this.devicesRaw[sn] = d;
@@ -568,7 +572,9 @@ class Sunseeker extends utils.Adapter {
     }
 
     async updateAllDevices() {
-        for (const sn of Object.keys(this.devicesRaw)) {
+        const sns = Object.keys(this.devicesRaw);
+        this.log.debug(`updateAllDevices: ${sns.length} Gerät(e)`);
+        for (const sn of sns) {
             try {
                 await this.updateDevice(sn);
             } catch (err) {
@@ -582,6 +588,7 @@ class Sunseeker extends utils.Adapter {
         if (!dev) {
             throw new Error(`Gerät ${sn} unbekannt`);
         }
+        this.log.debug(`updateDevice ${sn}: Status + Einstellungen abrufen`);
         const statusPath =
             this.config.apptype === "Old"
                 ? `/mower/device/getBysn?sn=${encodeURIComponent(sn)}`
@@ -1070,6 +1077,7 @@ class Sunseeker extends utils.Adapter {
             this.log.debug(`MQTT für unbekanntes Gerät: ${topic} ${JSON.stringify(data).slice(0, 120)}`);
             return;
         }
+        this.log.debug(`MQTT ${sn} ${topic}: ${JSON.stringify(data).length} Bytes`);
         const statusData = data.data && typeof data.data === "object" ? data.data : data;
         this.json2iob.parse(`${sn}.status`, statusData, {
             channelName: "Status",
@@ -1163,7 +1171,9 @@ class Sunseeker extends utils.Adapter {
     }
 
     async fetchInitialProperties() {
-        for (const sn of Object.keys(this.deviceMeta)) {
+        const sns = Object.keys(this.deviceMeta);
+        this.log.debug(`fetchInitialProperties: ${sns.length} Gerät(e)`);
+        for (const sn of sns) {
             const meta = this.deviceMeta[sn];
             const cls = meta.modelClass;
             if (cls === "V1") {
@@ -1211,12 +1221,15 @@ class Sunseeker extends utils.Adapter {
         }
         const meta = this.deviceMeta[sn];
         if (!meta || (meta.modelClass !== "S" && meta.modelClass !== "X")) {
+            this.log.debug(`fetchMap ${sn}: Modellklasse ${meta && meta.modelClass} ohne Karte, übersprungen`);
             return;
         }
         if (meta.mapInFlight) {
+            this.log.debug(`fetchMap ${sn}: läuft bereits`);
             return;
         }
         meta.mapInFlight = true;
+        this.log.debug(`fetchMap ${sn}: Karteninfo abrufen`);
         try {
             const info = await this.request(
                 "GET",
@@ -1225,6 +1238,7 @@ class Sunseeker extends utils.Adapter {
             );
             const data = info.json && info.json.data;
             if (!data) {
+                this.log.debug(`fetchMap ${sn}: keine map.info Daten`);
                 return;
             }
             await this.json2iob.parse(`${sn}.map.info`, data, {
@@ -1233,9 +1247,11 @@ class Sunseeker extends utils.Adapter {
             });
             const newMapId = data.mapModifyTime;
             if (newMapId !== undefined && newMapId === meta.mapid) {
+                this.log.debug(`fetchMap ${sn}: mapModifyTime ${newMapId} unverändert, kein Re-Download`);
                 return;
             }
             if (newMapId !== undefined) {
+                this.log.debug(`fetchMap ${sn}: mapModifyTime ${meta.mapid || "?"} -> ${newMapId}`);
                 meta.mapid = newMapId;
             }
 
@@ -1246,6 +1262,9 @@ class Sunseeker extends utils.Adapter {
             );
             const heatData = heat.json && heat.json.data;
             if (heatData) {
+                this.log.debug(
+                    `fetchMap ${sn}: heatmap urls image=${!!heatData.url} wifi=${!!heatData.wifiUrl} net=${!!heatData.netUrl} texture=${!!heatData.textureUrl}`,
+                );
                 await this.fetchMapImage(sn, "image", heatData.url);
                 await this.fetchMapImage(sn, "wifi", heatData.wifiUrl);
                 await this.fetchMapImage(sn, "net", heatData.netUrl);
@@ -1254,6 +1273,7 @@ class Sunseeker extends utils.Adapter {
             const mapJson = await this.fetchMapJson(sn, "mapData", data.mapPathFileUrl);
             const pathJson = await this.fetchMapJson(sn, "pathData", data.realPathFileUlr || data.realPathFileUrl);
             try {
+                this.log.debug(`fetchMap ${sn}: Livemap rendern (mapData=${!!mapJson} pathData=${!!pathJson})`);
                 const dataUrl = await this.renderLivemap(mapJson, pathJson);
                 if (dataUrl) {
                     await this.extendObject(`${sn}.map.livemap`, {
@@ -1268,6 +1288,9 @@ class Sunseeker extends utils.Adapter {
                         native: {},
                     });
                     this.setState(`${sn}.map.livemap`, dataUrl, true);
+                    this.log.debug(`fetchMap ${sn}: Livemap geschrieben (${dataUrl.length} Bytes data URL)`);
+                } else {
+                    this.log.debug(`fetchMap ${sn}: Livemap nicht gerendert (keine Geometrie)`);
                 }
             } catch (err) {
                 this.log.debug(`Livemap render ${sn}: ${err.message}`);
@@ -1290,6 +1313,7 @@ class Sunseeker extends utils.Adapter {
                     native: {},
                 });
                 this.setState(`${sn}.map.backup`, JSON.stringify(backup.json.data), true);
+                this.log.debug(`fetchMap ${sn}: Backup-Karte geschrieben`);
             }
         } finally {
             meta.mapInFlight = false;
@@ -1304,10 +1328,13 @@ class Sunseeker extends utils.Adapter {
      */
     async fetchMapJson(sn, name, url) {
         if (!url) {
+            this.log.debug(`fetchMapJson ${sn}/${name}: keine URL`);
             return null;
         }
+        this.log.debug(`fetchMapJson ${sn}/${name}: GET ${String(url).slice(0, 120)}`);
         const res = await axios.get(url, { timeout: 30000, validateStatus: () => true });
         if (res.status !== 200 || res.data == null) {
+            this.log.debug(`fetchMapJson ${sn}/${name}: HTTP ${res.status} leer`);
             return null;
         }
         let parsed;
@@ -1335,6 +1362,7 @@ class Sunseeker extends utils.Adapter {
             native: {},
         });
         this.setState(`${sn}.map.${name}`, payload, true);
+        this.log.debug(`fetchMapJson ${sn}/${name}: ${payload.length} Bytes geschrieben`);
         return parsed;
     }
 
@@ -1545,14 +1573,17 @@ class Sunseeker extends utils.Adapter {
      */
     async fetchMapImage(sn, name, url) {
         if (!url) {
+            this.log.debug(`fetchMapImage ${sn}/${name}: keine URL`);
             return;
         }
+        this.log.debug(`fetchMapImage ${sn}/${name}: GET ${String(url).slice(0, 120)}`);
         const res = await axios.get(url, {
             timeout: 30000,
             responseType: "arraybuffer",
             validateStatus: () => true,
         });
         if (res.status !== 200 || !res.data) {
+            this.log.debug(`fetchMapImage ${sn}/${name}: HTTP ${res.status} leer`);
             return;
         }
         const buf = Buffer.from(res.data);
@@ -1597,6 +1628,7 @@ class Sunseeker extends utils.Adapter {
             native: {},
         });
         this.setState(`${sn}.map.${name}`, dataUrl, true);
+        this.log.debug(`fetchMapImage ${sn}/${name}: ${ct}, ${buf.length} Bytes geschrieben`);
     }
 }
 
