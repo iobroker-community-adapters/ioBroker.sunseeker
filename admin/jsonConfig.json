@@ -1,0 +1,75 @@
+{
+    "i18n": true,
+    "type": "panel",
+    "items": {
+        "username": {
+            "type": "text",
+            "label": "Benutzername / E-Mail",
+            "newLine": true,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        },
+        "password": {
+            "type": "password",
+            "label": "Passwort",
+            "newLine": false,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        },
+        "region": {
+            "type": "select",
+            "label": "Region",
+            "newLine": true,
+            "options": [
+                { "label": "EU", "value": "EU" },
+                { "label": "US", "value": "US" }
+            ],
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        },
+        "apptype": {
+            "type": "select",
+            "label": "API",
+            "newLine": false,
+            "options": [
+                { "label": "New (S/X/V/V1)", "value": "New" },
+                { "label": "Old", "value": "Old" }
+            ],
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        },
+        "interval": {
+            "type": "number",
+            "label": "Polling Intervall (Sekunden)",
+            "min": 30,
+            "newLine": true,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        },
+        "language": {
+            "type": "text",
+            "label": "Sprache",
+            "newLine": false,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        }
+    }
+}
