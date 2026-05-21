@@ -222,6 +222,23 @@ class Sunseeker extends utils.Adapter {
             return;
         }
         const parts = id.split(".");
+        const scheduleIdx = parts.indexOf("schedule");
+        if (scheduleIdx > 0 && parts[scheduleIdx + 1]) {
+            const sn = parts[scheduleIdx - 1];
+            const leaf = parts[scheduleIdx + 1];
+            if (leaf === "set") {
+                try {
+                    await this.setSchedule(sn);
+                    this.setTimeout(() => this.updateDevice(sn).catch(() => {}), 1500);
+                    this.setState(id, { val: false, ack: true });
+                } catch (err) {
+                    this.log.error(`Zeitplan für ${sn} fehlgeschlagen: ${err.message}`);
+                }
+                return;
+            }
+            this.setState(id, { val: state.val, ack: true });
+            return;
+        }
         const settingsIdx = parts.indexOf("settings");
         if (settingsIdx > 0 && parts[settingsIdx + 1]) {
             const sn = parts[settingsIdx - 1];
@@ -454,6 +471,7 @@ class Sunseeker extends utils.Adapter {
                 forceIndex: false,
             });
             await this.ensureRemoteButtons(sn);
+            await this.ensureScheduleStates(sn);
             this.log.info(`Gerät: sn=${sn} model=${d.modelName} name=${d.deviceName}`);
         }
     }
@@ -489,6 +507,61 @@ class Sunseeker extends utils.Adapter {
                 native: {},
             });
         }
+    }
+
+    async ensureScheduleStates(sn) {
+        await this.extendObject(`${sn}.schedule`, {
+            type: "channel",
+            common: { name: "Zeitplan" },
+            native: {},
+        });
+        const days = [
+            ["monday", "Montag"],
+            ["tuesday", "Dienstag"],
+            ["wednesday", "Mittwoch"],
+            ["thursday", "Donnerstag"],
+            ["friday", "Freitag"],
+            ["saturday", "Samstag"],
+            ["sunday", "Sonntag"],
+        ];
+        for (const [key, label] of days) {
+            await this.extendObject(`${sn}.schedule.${key}`, {
+                type: "state",
+                common: {
+                    name: `${label} (HH:MM-HH:MM, leer = aus)`,
+                    type: "string",
+                    role: "text",
+                    read: true,
+                    write: true,
+                    def: "",
+                },
+                native: {},
+            });
+        }
+        await this.extendObject(`${sn}.schedule.pause`, {
+            type: "state",
+            common: {
+                name: "Zeitplan pausiert",
+                type: "boolean",
+                role: "switch",
+                read: true,
+                write: true,
+                def: false,
+            },
+            native: {},
+        });
+        await this.extendObject(`${sn}.schedule.set`, {
+            type: "state",
+            common: {
+                name: "Zeitplan senden",
+                type: "boolean",
+                role: "button",
+                read: false,
+                write: true,
+                def: false,
+            },
+            native: {},
+        });
     }
 
     async updateAllDevices() {
@@ -703,6 +776,147 @@ class Sunseeker extends utils.Adapter {
             `${meta.cmdurl}${endpoint}`,
             { ...this.authHeaders(), "Content-Type": "application/json" },
             JSON.stringify(data),
+        );
+        if (res.json && res.json.ok === false) {
+            throw new Error(`API: ${res.json.msg}`);
+        }
+    }
+
+    /**
+     * @param {string} value
+     * @returns {{startSec: number, endSec: number} | null}
+     */
+    parseScheduleDay(value) {
+        const trimmed = String(value || "").trim();
+        if (!trimmed) {
+            return null;
+        }
+        const m = trimmed.match(/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/);
+        if (!m) {
+            throw new Error(`Format "HH:MM-HH:MM" erwartet, war: "${trimmed}"`);
+        }
+        const sh = Number(m[1]);
+        const sm = Number(m[2]);
+        const eh = Number(m[3]);
+        const em = Number(m[4]);
+        if (sh > 23 || eh > 23 || sm > 59 || em > 59) {
+            throw new Error(`Ungültige Uhrzeit: "${trimmed}"`);
+        }
+        return { startSec: sh * 3600 + sm * 60, endSec: eh * 3600 + em * 60 };
+    }
+
+    /**
+     * @param {number} sec
+     */
+    secToHms(sec) {
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
+    }
+
+    /**
+     * @param {string} sn
+     */
+    async setSchedule(sn) {
+        const dev = this.devicesRaw[sn];
+        const meta = this.deviceMeta[sn];
+        if (!dev || !meta) {
+            throw new Error(`Gerät ${sn} unbekannt`);
+        }
+        const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+        const parsed = [];
+        for (let i = 0; i < days.length; i++) {
+            const st = await this.getStateAsync(`${sn}.schedule.${days[i]}`);
+            const window = this.parseScheduleDay(st && st.val ? String(st.val) : "");
+            parsed.push({ dayIndex: i + 1, key: days[i], window });
+        }
+        const pauseSt = await this.getStateAsync(`${sn}.schedule.pause`);
+        const pause = !!(pauseSt && pauseSt.val);
+        const appId = String(dev.appUserId || this.session.user_id);
+
+        if (this.config.apptype === "Old") {
+            const bos = parsed.map(p => ({
+                dayOfWeek: p.dayIndex,
+                startAt: p.window ? this.secToHms(p.window.startSec) : "00:00:00",
+                endAt: p.window ? this.secToHms(p.window.endSec) : "00:00:00",
+                trimFlag: !!p.window,
+            }));
+            const res = await this.request(
+                "POST",
+                "/app_mower/device-schedule/setScheduling",
+                { ...this.authHeaders(), "Content-Type": "application/json" },
+                JSON.stringify({ appId, autoFlag: !pause, deviceScheduleBOS: bos, deviceSn: sn }),
+            );
+            if (res.json && res.json.ok === false) {
+                throw new Error(`API: ${res.json.msg}`);
+            }
+            return;
+        }
+
+        if (meta.modelClass === "V1") {
+            const bos = [];
+            for (const p of parsed) {
+                if (!p.window) {
+                    continue;
+                }
+                bos.push({
+                    dayOfWeek: p.dayIndex,
+                    startAt: this.secToHms(p.window.startSec),
+                    endAt: this.secToHms(p.window.endSec),
+                    trimFlag: true,
+                });
+            }
+            const res = await this.request(
+                "POST",
+                `${meta.cmdurl}setProperty`,
+                { ...this.authHeaders(), "Content-Type": "application/json" },
+                JSON.stringify({
+                    appId,
+                    deviceSn: sn,
+                    autoFlag: !pause,
+                    method: "setSchedule",
+                    deviceScheduleBOS: bos,
+                    pause,
+                }),
+            );
+            if (res.json && res.json.ok === false) {
+                throw new Error(`API: ${res.json.msg}`);
+            }
+            return;
+        }
+
+        // S/X/V — set_property time_tactics. Mon=1..Sat=6, Sun=0
+        const dayPeriod = { monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 0 };
+        const time = [];
+        for (const p of parsed) {
+            if (!p.window) {
+                continue;
+            }
+            time.push({
+                unlock: true,
+                period: [dayPeriod[p.key]],
+                start: p.window.startSec,
+                active: true,
+                end: p.window.endSec,
+                need_fllow_boader: false,
+            });
+        }
+        const res = await this.request(
+            "POST",
+            `${meta.cmdurl}set_property`,
+            { ...this.authHeaders(), "Content-Type": "application/json" },
+            JSON.stringify({
+                appId,
+                deviceSn: sn,
+                id: "setTimeTactics",
+                key: "time_tactics",
+                method: "set_property",
+                time,
+                time_custom_flag: true,
+                recommended_time_flag: false,
+                time_zone: 3600,
+                pause,
+            }),
         );
         if (res.json && res.json.ok === false) {
             throw new Error(`API: ${res.json.msg}`);

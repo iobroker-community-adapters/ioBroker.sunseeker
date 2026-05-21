@@ -10,6 +10,7 @@
   "homepage": "https://github.com/iobroker-community-adapters/ioBroker.sunseeker",
   "license": "MIT",
   "keywords": [
+    "ioBroker",
     "sunseeker",
     "adano",
     "brücke"

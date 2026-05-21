@@ -86,12 +86,27 @@ These settings are made writable directly under `<sn>.settings.*`. Writing them 
 
 When writing, the adapter posts `{ id: "setDevBlade", key: "blade", method: "set_property", speed|height: <int> }`. After 1.5 s a status refresh is scheduled; MQTT push usually updates the values as well.
 
+## Schedule (`<sn>.schedule.*`)
+
+A simple weekly plan with one window per day. The states are writable but the cloud is only updated when `set` is triggered.
+
+| State | Type | Format |
+| --- | --- | --- |
+| `monday` … `sunday` | string | `"HH:MM-HH:MM"` for the active window, empty string disables the day |
+| `pause` | boolean | Pause the schedule without clearing the windows |
+| `set` | button | Sends the current values to the cloud |
+
+The dispatched payload depends on the model:
+
+- `Old` API: `POST /app_mower/device-schedule/setScheduling` with `deviceScheduleBOS` for all 7 days; `autoFlag` is the inverse of `pause`.
+- `New` V1: `POST {cmdurl}setProperty` with `method: "setSchedule"` and `deviceScheduleBOS` containing only the active days.
+- `New` S/X/V: `POST {cmdurl}set_property` with `id: "setTimeTactics"`, `key: "time_tactics"` and a `time` array (one entry per active day, day index Mon=1…Sat=6, Sun=0; start/end as seconds since midnight).
+
 ## Known limitations
 
 The Sunseeker API exposes far more fields than the adapter currently writes. All settings are available read-only as raw data under `<sn>.settings`. The following are **not yet** exposed as writable states:
 
 - Rain delay (on/off, hours)
-- Schedule (read/write weekly plan)
 - Zone settings (per-zone blade speed/height, ordering)
 - OTA update
 - Work records / mowing history
@@ -112,6 +127,8 @@ The Sunseeker API exposes far more fields than the adapter currently writes. All
 -->
 
 ### **WORK IN PROGRESS**
+
+### 0.0.1
 
 - (TA2k) initial release
 
