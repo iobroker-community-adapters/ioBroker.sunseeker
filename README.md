@@ -90,12 +90,20 @@ Raw payloads (REST and MQTT) are written through `json2iob` directly — no para
 
 These settings are made writable directly under `<sn>.settings.*`. Writing them sends a `set_property` / `setProperty` (model-dependent) request to the cloud:
 
-| State         | Range                  | Unit |
-| ------------- | ---------------------- | ---- |
-| `bladeSpeed`  | 2800 – 3000 (step 100) | rpm  |
-| `bladeHeight` | 20 – 100 (step 5)      | mm   |
+| State                | Range                  | Unit | Notes                  |
+| -------------------- | ---------------------- | ---- | ---------------------- |
+| `bladeSpeed`         | 2800 – 3000 (step 100) | rpm  | New API only           |
+| `bladeHeight`        | 20 – 100 (step 5)      | mm   | New API only           |
+| `rainFlag`           | boolean                | —    | Old + New API          |
+| `rainDelayDuration`  | 0 – 720 (step 1)       | min  | Old + New API          |
 
-When writing, the adapter posts `{ id: "setDevBlade", key: "blade", method: "set_property", speed|height: <int> }`. After 1.5 s a status refresh is scheduled; MQTT push usually updates the values as well.
+When writing blade values, the adapter posts `{ id: "setDevBlade", key: "blade", method: "set_property", speed|height: <int> }`. After 1.5 s a status refresh is scheduled; MQTT push usually updates the values as well.
+
+Writing `rainFlag` or `rainDelayDuration` always sends both values to the cloud (the missing one is read from the current state). The endpoint depends on the model:
+
+- `Old`: `POST /app_mower/device/setRain/{sn}/{appId}` with `rainFlag` + `rainDelayDuration`.
+- `New` V1: `POST {cmdurl}setProperty` with `method: "setRain"`, `rainFlag`, `rainDelayDuration`.
+- `New` S/X/V: `POST {cmdurl}set_property` with `id: "setDevRain"`, `key: "rain"`, `rain_flag`, `delay`.
 
 ## Schedule (`<sn>.schedule.*`)
 
@@ -117,7 +125,6 @@ The dispatched payload depends on the model:
 
 The Sunseeker API exposes far more fields than the adapter currently writes. All settings are available read-only as raw data under `<sn>.settings`. The following are **not yet** exposed as writable states:
 
-- Rain delay (on/off, hours)
 - Zone settings (per-zone blade speed/height, ordering)
 - OTA update
 - Work records / mowing history

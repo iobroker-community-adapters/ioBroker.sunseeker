@@ -256,6 +256,22 @@ class Sunseeker extends utils.Adapter {
                 }
                 return;
             }
+            if (leaf === "rainFlag" || leaf === "rainDelayDuration") {
+                try {
+                    const flagVal =
+                        leaf === "rainFlag" ? state.val : (await this.getStateAsync(`${sn}.settings.rainFlag`))?.val;
+                    const durVal =
+                        leaf === "rainDelayDuration"
+                            ? state.val
+                            : (await this.getStateAsync(`${sn}.settings.rainDelayDuration`))?.val;
+                    await this.setRain(sn, Boolean(flagVal), Math.round(Number(durVal) || 0));
+                    this.setTimeout(() => this.updateDevice(sn).catch(() => {}), 1500);
+                    this.setState(id, { val: state.val, ack: true });
+                } catch (err) {
+                    this.log.error(`Regenverzögerung für ${sn} fehlgeschlagen: ${err.message}`);
+                }
+                return;
+            }
         }
         const remoteIdx = parts.indexOf("remote");
         if (remoteIdx < 0 || remoteIdx + 1 >= parts.length) {
@@ -629,37 +645,69 @@ class Sunseeker extends utils.Adapter {
      * @param {Record<string, any>} settingsData
      */
     async ensureBladeWritable(sn, settingsData) {
-        if (this.config.apptype === "Old") {
+        if (!settingsData) {
             return;
         }
-        if (settingsData && Object.prototype.hasOwnProperty.call(settingsData, "bladeSpeed")) {
-            await this.extendObject(`${sn}.settings.bladeSpeed`, {
+        if (this.config.apptype !== "Old") {
+            if (Object.prototype.hasOwnProperty.call(settingsData, "bladeSpeed")) {
+                await this.extendObject(`${sn}.settings.bladeSpeed`, {
+                    type: "state",
+                    common: {
+                        name: "Klingen-Drehzahl",
+                        type: "number",
+                        role: "level",
+                        min: 2800,
+                        max: 3000,
+                        step: 100,
+                        unit: "rpm",
+                        read: true,
+                        write: true,
+                    },
+                    native: {},
+                });
+            }
+            if (Object.prototype.hasOwnProperty.call(settingsData, "bladeHeight")) {
+                await this.extendObject(`${sn}.settings.bladeHeight`, {
+                    type: "state",
+                    common: {
+                        name: "Schnitthöhe",
+                        type: "number",
+                        role: "level",
+                        min: 20,
+                        max: 100,
+                        step: 5,
+                        unit: "mm",
+                        read: true,
+                        write: true,
+                    },
+                    native: {},
+                });
+            }
+        }
+        if (Object.prototype.hasOwnProperty.call(settingsData, "rainFlag")) {
+            await this.extendObject(`${sn}.settings.rainFlag`, {
                 type: "state",
                 common: {
-                    name: "Klingen-Drehzahl",
-                    type: "number",
-                    role: "level",
-                    min: 2800,
-                    max: 3000,
-                    step: 100,
-                    unit: "rpm",
+                    name: "Regenverzögerung aktiv",
+                    type: "boolean",
+                    role: "switch",
                     read: true,
                     write: true,
                 },
                 native: {},
             });
         }
-        if (settingsData && Object.prototype.hasOwnProperty.call(settingsData, "bladeHeight")) {
-            await this.extendObject(`${sn}.settings.bladeHeight`, {
+        if (Object.prototype.hasOwnProperty.call(settingsData, "rainDelayDuration")) {
+            await this.extendObject(`${sn}.settings.rainDelayDuration`, {
                 type: "state",
                 common: {
-                    name: "Schnitthöhe",
+                    name: "Regenverzögerung Dauer",
                     type: "number",
                     role: "level",
-                    min: 20,
-                    max: 100,
-                    step: 5,
-                    unit: "mm",
+                    min: 0,
+                    max: 720,
+                    step: 1,
+                    unit: "min",
                     read: true,
                     write: true,
                 },
@@ -786,6 +834,76 @@ class Sunseeker extends utils.Adapter {
             `${meta.cmdurl}${endpoint}`,
             { ...this.authHeaders(), "Content-Type": "application/json" },
             JSON.stringify(data),
+        );
+        if (res.json && res.json.ok === false) {
+            throw new Error(`API: ${res.json.msg}`);
+        }
+    }
+
+    /**
+     * @param {string} sn
+     * @param {boolean} flag
+     * @param {number} durationMin
+     */
+    async setRain(sn, flag, durationMin) {
+        const dev = this.devicesRaw[sn];
+        const meta = this.deviceMeta[sn];
+        if (!dev || !meta) {
+            throw new Error(`Gerät ${sn} unbekannt`);
+        }
+        const duration = Math.max(0, Math.min(720, Math.round(durationMin)));
+        const appId = String(dev.appUserId || this.session.user_id);
+
+        if (this.config.apptype === "Old") {
+            const res = await this.request(
+                "POST",
+                `/app_mower/device/setRain/${encodeURIComponent(sn)}/${appId}`,
+                { ...this.authHeaders(), "Content-Type": "application/json" },
+                JSON.stringify({
+                    appId,
+                    deviceSn: sn,
+                    rainDelayDuration: duration,
+                    rainFlag: flag,
+                }),
+            );
+            if (res.json && res.json.ok === false) {
+                throw new Error(`API: ${res.json.msg}`);
+            }
+            return;
+        }
+
+        if (meta.modelClass === "V1") {
+            const res = await this.request(
+                "POST",
+                `${meta.cmdurl}setProperty`,
+                { ...this.authHeaders(), "Content-Type": "application/json" },
+                JSON.stringify({
+                    appId,
+                    deviceSn: sn,
+                    method: "setRain",
+                    rainDelayDuration: duration,
+                    rainFlag: flag,
+                }),
+            );
+            if (res.json && res.json.ok === false) {
+                throw new Error(`API: ${res.json.msg}`);
+            }
+            return;
+        }
+
+        const res = await this.request(
+            "POST",
+            `${meta.cmdurl}set_property`,
+            { ...this.authHeaders(), "Content-Type": "application/json" },
+            JSON.stringify({
+                appId,
+                deviceSn: sn,
+                id: "setDevRain",
+                key: "rain",
+                method: "set_property",
+                rain_flag: flag,
+                delay: duration,
+            }),
         );
         if (res.json && res.json.ok === false) {
             throw new Error(`API: ${res.json.msg}`);
