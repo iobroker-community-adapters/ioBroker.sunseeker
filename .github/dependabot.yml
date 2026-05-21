@@ -1,28 +1,30 @@
+# Dependabot will run on day 8 of each month at 02:34 (Europe/Berlin timezone)
 version: 2
 updates:
-  - package-ecosystem: npm
-    directory: "/"
+
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: monthly
-      time: "00:05"
-      timezone: Europe/Berlin
+      interval: 'cron'
+      timezone: 'Europe/Berlin'
+      cronjob: '34 2 8 * *'
     open-pull-requests-limit: 15
     assignees:
-      - iobroker-community-adapters
-    versioning-strategy: increase
+      - 'iobroker-community-adapters'
+    versioning-strategy: 'increase'
     cooldown:
       default-days: 7
     ignore:
-      - dependency-name: "@types/node"
+      - dependency-name: '@types/node'
         update-types:
-          - "version-update:semver-major"
+          - 'version-update:semver-major'
 
-  - package-ecosystem: github-actions
-    directory: "/"
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: monthly
-      time: "00:05"
-      timezone: Europe/Berlin
+      interval: 'cron'
+      timezone: 'Europe/Berlin'
+      cronjob: '34 2 8 * *'
     open-pull-requests-limit: 15
     assignees:
-      - iobroker-community-adapters
+      - 'iobroker-community-adapters'
