@@ -132,6 +132,8 @@ The Sunseeker API exposes far more fields than the adapter currently writes. All
 
 - (TA2k) initial release
 
+[Older changelogs can be found there](CHANGELOG_OLD.md)
+
 ## License
 
 MIT License
