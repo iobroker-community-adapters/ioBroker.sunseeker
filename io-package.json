@@ -1,112 +1,122 @@
 {
-    "common": {
-        "name": "sunseeker",
-        "version": "0.0.1",
-        "news": {
-            "0.0.1": {
-                "en": "initial release",
-                "de": "Erstveröffentlichung",
-                "ru": "Начальная версия",
-                "pt": "lançamento inicial",
-                "nl": "Eerste uitgave",
-                "fr": "Première version",
-                "it": "Versione iniziale",
-                "es": "Versión inicial",
-                "pl": "Pierwsze wydanie",
-                "uk": "Початкова версія",
-                "zh-cn": "首次出版"
-            }
-        },
-        "titleLang": {
-            "en": "Sunseeker Mower",
-            "de": "Sunseeker-Mäher",
-            "ru": "Сансикер Косилка",
-            "pt": "Cortador Sunseeker",
-            "nl": "Sunseeker-maaier",
-            "fr": "Tondeuse Sunseeker",
-            "it": "Rasaerba Sunseeker",
-            "es": "Cortacésped Sunseeker",
-            "pl": "Kosiarka Sunseeker",
-            "uk": "Косарка Sunseeker",
-            "zh-cn": "圣汐割草机"
-        },
-        "desc": {
-            "en": "Sunseeker Mower Adapter",
-            "de": "Sunseeker Rasenmäher-Adapter",
-            "ru": "Адаптер для газонокосилки Sunseeker",
-            "pt": "Adaptador de cortador Sunseeker",
-            "nl": "Sunseeker-maaieradapter",
-            "fr": "Adaptateur pour tondeuse Sunseeker",
-            "it": "Adattatore per tosaerba Sunseeker",
-            "es": "Adaptador para cortacésped Sunseeker",
-            "pl": "Adapter do kosiarki Sunseeker",
-            "uk": "Адаптер косарки Sunseeker",
-            "zh-cn": "Sunseeker 割草机适配器"
-        },
-        "authors": ["TA2k <tombox2020@gmail.com>"],
-        "keywords": ["sunseeker", "adano", "brücke"],
-        "licenseInformation": {
-            "type": "free",
-            "license": "MIT"
-        },
-        "platform": "Javascript/Node.js",
-        "icon": "sunseeker.png",
-        "enabled": true,
-        "extIcon": "https://raw.githubusercontent.com/iobroker-community-adapters/ioBroker.sunseeker/main/admin/sunseeker.png",
-        "readme": "https://github.com/iobroker-community-adapters/ioBroker.sunseeker/blob/main/README.md",
-        "loglevel": "info",
-        "tier": 3,
-        "mode": "daemon",
-        "type": "garden",
-        "compact": true,
-        "connectionType": "cloud",
-        "dataSource": "poll",
-        "adminUI": {
-            "config": "json"
-        },
-        "dependencies": [
-            {
-                "js-controller": ">=6.0.11"
-            }
-        ],
-        "globalDependencies": [
-            {
-                "admin": ">=7.6.17"
-            }
-        ]
+  "common": {
+    "name": "sunseeker",
+    "version": "0.0.1",
+    "news": {
+      "0.0.1": {
+        "en": "initial release",
+        "de": "Erstveröffentlichung",
+        "ru": "Начальная версия",
+        "pt": "lançamento inicial",
+        "nl": "Eerste uitgave",
+        "fr": "Première version",
+        "it": "Versione iniziale",
+        "es": "Versión inicial",
+        "pl": "Pierwsze wydanie",
+        "uk": "Початкова версія",
+        "zh-cn": "首次出版"
+      }
     },
-    "native": {
-        "username": "",
-        "password": "",
-        "region": "EU",
-        "apptype": "New",
-        "interval": 300,
-        "language": "de-DE"
+    "titleLang": {
+      "en": "Sunseeker Mower",
+      "de": "Sunseeker-Mäher",
+      "ru": "Сансикер Косилка",
+      "pt": "Cortador Sunseeker",
+      "nl": "Sunseeker-maaier",
+      "fr": "Tondeuse Sunseeker",
+      "it": "Rasaerba Sunseeker",
+      "es": "Cortacésped Sunseeker",
+      "pl": "Kosiarka Sunseeker",
+      "uk": "Косарка Sunseeker",
+      "zh-cn": "圣汐割草机"
     },
-    "encryptedNative": ["password"],
-    "protectedNative": ["password"],
-    "objects": [],
-    "instanceObjects": [
-        {
-            "_id": "info",
-            "type": "channel",
-            "common": {
-                "name": "Information"
-            },
-            "native": {}
-        },
-        {
-            "_id": "info.connection",
-            "type": "state",
-            "common": {
-                "role": "indicator.connected",
-                "name": "Device or service connected",
-                "type": "boolean",
-                "read": true,
-                "write": false,
-                "def": false
-            },
-            "native": {}
-        }
+    "desc": {
+      "en": "Sunseeker Mower Adapter",
+      "de": "Sunseeker Rasenmäher-Adapter",
+      "ru": "Адаптер для газонокосилки Sunseeker",
+      "pt": "Adaptador de cortador Sunseeker",
+      "nl": "Sunseeker-maaieradapter",
+      "fr": "Adaptateur pour tondeuse Sunseeker",
+      "it": "Adattatore per tosaerba Sunseeker",
+      "es": "Adaptador para cortacésped Sunseeker",
+      "pl": "Adapter do kosiarki Sunseeker",
+      "uk": "Адаптер косарки Sunseeker",
+      "zh-cn": "Sunseeker 割草机适配器"
+    },
+    "authors": [
+      "TA2k <tombox2020@gmail.com>"
+    ],
+    "keywords": [
+      "sunseeker",
+      "adano",
+      "brücke"
+    ],
+    "licenseInformation": {
+      "type": "free",
+      "license": "MIT"
+    },
+    "platform": "Javascript/Node.js",
+    "icon": "sunseeker.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/iobroker-community-adapters/ioBroker.sunseeker/main/admin/sunseeker.png",
+    "readme": "https://github.com/iobroker-community-adapters/ioBroker.sunseeker/blob/main/README.md",
+    "loglevel": "info",
+    "tier": 3,
+    "mode": "daemon",
+    "type": "garden",
+    "compact": true,
+    "connectionType": "cloud",
+    "dataSource": "poll",
+    "adminUI": {
+      "config": "json"
+    },
+    "dependencies": [
+      {
+        "js-controller": ">=6.0.11"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=7.8.23"
+      }
     ]
+  },
+  "native": {
+    "username": "",
+    "password": "",
+    "region": "EU",
+    "apptype": "New",
+    "interval": 300,
+    "language": "de-DE"
+  },
+  "encryptedNative": [
+    "password"
+  ],
+  "protectedNative": [
+    "password"
+  ],
+  "objects": [],
+  "instanceObjects": [
+    {
+      "_id": "info",
+      "type": "channel",
+      "common": {
+        "name": "Information"
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "role": "indicator.connected",
+        "name": "Device or service connected",
+        "type": "boolean",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    }
+  ]
 }
