@@ -156,6 +156,7 @@ All paths originate from `Sunseeker Robot_1.4.1_APKPure` (`ApiServiceWireless.sm
 -->
 
 ### **WORK IN PROGRESS**
+- (ioBroker-Bot) Adapter requires admin >= 7.8.23 now.
 
 ### 0.0.1
 
