@@ -533,6 +533,12 @@ class Sunseeker extends utils.Adapter {
             });
             await this.ensureBladeWritable(sn, settings.json.data);
         }
+        if (this.config.apptype !== "Old") {
+            const meta = this.deviceMeta[sn];
+            if (meta && (meta.modelClass === "S" || meta.modelClass === "X")) {
+                await this.fetchMap(sn).catch(err => this.log.debug(`Map ${sn}: ${err.message}`));
+            }
+        }
     }
 
     /**
@@ -946,6 +952,9 @@ class Sunseeker extends utils.Adapter {
             if (cls === "V1") {
                 continue;
             }
+            if (cls === "S" || cls === "X") {
+                await this.fetchMap(sn).catch(err => this.log.debug(`Map ${sn}: ${err.message}`));
+            }
             await this.getDeviceProperty(sn, {
                 id: "getDevAllProperties",
                 key: "all_property",
@@ -955,10 +964,12 @@ class Sunseeker extends utils.Adapter {
                 key: "region",
             });
             if (cls === "S" || cls === "X") {
+                const mapid = meta.mapid || 0;
+                const mapFile = mapid ? `Wireless_${sn}_${mapid}.json` : `Wireless_${sn}.json`;
                 await this.getDeviceProperty(sn, {
                     id: "getAllPath",
                     key: "all_path",
-                    map_file: `Wireless_${sn}.json`,
+                    map_file: mapFile,
                 });
             }
             if (cls === "V") {
@@ -972,6 +983,96 @@ class Sunseeker extends utils.Adapter {
                 });
             }
         }
+    }
+
+    /**
+     * @param {string} sn
+     */
+    async fetchMap(sn) {
+        if (this.config.apptype === "Old") {
+            return;
+        }
+        const meta = this.deviceMeta[sn];
+        if (!meta || (meta.modelClass !== "S" && meta.modelClass !== "X")) {
+            return;
+        }
+        if (meta.mapInFlight) {
+            return;
+        }
+        meta.mapInFlight = true;
+        try {
+            const info = await this.request(
+                "GET",
+                `/wireless_map/wireless_device/get?deviceSn=${encodeURIComponent(sn)}`,
+                this.authHeaders(),
+            );
+            const data = info.json && info.json.data;
+            if (!data) {
+                return;
+            }
+            await this.json2iob.parse(`${sn}.map.info`, data, {
+                channelName: "Karte",
+                forceIndex: false,
+            });
+            const newMapId = data.mapModifyTime;
+            if (newMapId !== undefined && newMapId === meta.mapid) {
+                return;
+            }
+            if (newMapId !== undefined) {
+                meta.mapid = newMapId;
+            }
+
+            const heat = await this.request(
+                "GET",
+                `/wireless_map/wireless_device/getHeatMap?deviceSn=${encodeURIComponent(sn)}`,
+                this.authHeaders(),
+            );
+            const heatData = heat.json && heat.json.data;
+            if (!heatData) {
+                return;
+            }
+            await this.fetchMapImage(sn, "image", heatData.url);
+            await this.fetchMapImage(sn, "wifi", heatData.wifiUrl);
+            await this.fetchMapImage(sn, "net", heatData.netUrl);
+        } finally {
+            meta.mapInFlight = false;
+        }
+    }
+
+    /**
+     * @param {string} sn
+     * @param {string} name
+     * @param {string} url
+     */
+    async fetchMapImage(sn, name, url) {
+        if (!url) {
+            return;
+        }
+        const res = await axios.get(url, {
+            timeout: 30000,
+            responseType: "arraybuffer",
+            validateStatus: () => true,
+        });
+        if (res.status !== 200 || !res.data) {
+            return;
+        }
+        const ct = String(res.headers["content-type"] || "image/png")
+            .split(";")[0]
+            .trim();
+        const b64 = Buffer.from(res.data).toString("base64");
+        const dataUrl = `data:${ct};base64,${b64}`;
+        await this.extendObject(`${sn}.map.${name}`, {
+            type: "state",
+            common: {
+                name: `Karten-${name} (data URL)`,
+                type: "string",
+                role: "value",
+                read: true,
+                write: false,
+            },
+            native: {},
+        });
+        this.setState(`${sn}.map.${name}`, dataUrl, true);
     }
 }
 
