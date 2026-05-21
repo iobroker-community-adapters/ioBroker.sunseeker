@@ -15,9 +15,11 @@ const utils = require("@iobroker/adapter-core");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const { Writable } = require("node:stream");
 const axios = require("axios");
 const mqtt = require("mqtt");
 const Json2iob = require("json2iob");
+const PImage = require("pureimage");
 
 const URL_OLD = "https://server.sk-robot.com/api";
 const HOST_OLD = "server.sk-robot.com";
@@ -1249,8 +1251,27 @@ class Sunseeker extends utils.Adapter {
                 await this.fetchMapImage(sn, "net", heatData.netUrl);
                 await this.fetchMapImage(sn, "texture", heatData.textureUrl);
             }
-            await this.fetchMapJson(sn, "mapData", data.mapPathFileUrl);
-            await this.fetchMapJson(sn, "pathData", data.realPathFileUlr || data.realPathFileUrl);
+            const mapJson = await this.fetchMapJson(sn, "mapData", data.mapPathFileUrl);
+            const pathJson = await this.fetchMapJson(sn, "pathData", data.realPathFileUlr || data.realPathFileUrl);
+            try {
+                const dataUrl = await this.renderLivemap(mapJson, pathJson);
+                if (dataUrl) {
+                    await this.extendObject(`${sn}.map.livemap`, {
+                        type: "state",
+                        common: {
+                            name: "Livemap (gerenderter PNG data URL)",
+                            type: "string",
+                            role: "value",
+                            read: true,
+                            write: false,
+                        },
+                        native: {},
+                    });
+                    this.setState(`${sn}.map.livemap`, dataUrl, true);
+                }
+            } catch (err) {
+                this.log.debug(`Livemap render ${sn}: ${err.message}`);
+            }
             const backup = await this.request(
                 "GET",
                 `/wireless_map/backup_map/get?sn=${encodeURIComponent(sn)}`,
@@ -1279,16 +1300,29 @@ class Sunseeker extends utils.Adapter {
      * @param {string} sn
      * @param {string} name
      * @param {string} url
+     * @returns {Promise<any>}
      */
     async fetchMapJson(sn, name, url) {
         if (!url) {
-            return;
+            return null;
         }
         const res = await axios.get(url, { timeout: 30000, validateStatus: () => true });
         if (res.status !== 200 || res.data == null) {
-            return;
+            return null;
         }
-        const payload = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
+        let parsed;
+        let payload;
+        if (typeof res.data === "string") {
+            payload = res.data;
+            try {
+                parsed = JSON.parse(res.data);
+            } catch {
+                parsed = null;
+            }
+        } else {
+            parsed = res.data;
+            payload = JSON.stringify(res.data);
+        }
         await this.extendObject(`${sn}.map.${name}`, {
             type: "state",
             common: {
@@ -1301,6 +1335,207 @@ class Sunseeker extends utils.Adapter {
             native: {},
         });
         this.setState(`${sn}.map.${name}`, payload, true);
+        return parsed;
+    }
+
+    /**
+     * Render a livemap (map polygons + recorded path + charger position) into a PNG data URL.
+     *
+     * @param {any} mapData parsed JSON of /wireless_map/wireless_device/get -> mapPathFileUrl
+     * @param {any} pathData parsed JSON of /wireless_map/wireless_device/get -> realPathFileUlr (array of [x,y,code])
+     * @returns {Promise<string|null>}
+     */
+    async renderLivemap(mapData, pathData) {
+        if (!mapData || typeof mapData !== "object") {
+            return null;
+        }
+        const origWarn = console.warn;
+        console.warn = (...args) => {
+            if (typeof args[0] === "string" && args[0].startsWith("can't project the same paths")) {
+                return;
+            }
+            origWarn(...args);
+        };
+        try {
+            return await this.renderLivemapInner(mapData, pathData);
+        } finally {
+            console.warn = origWarn;
+        }
+    }
+
+    /**
+     * @param {any} mapData parsed mapData JSON
+     * @param {any} pathData parsed pathData JSON
+     * @returns {Promise<string|null>}
+     */
+    async renderLivemapInner(mapData, pathData) {
+        const parsePoints = str => {
+            if (!str) {
+                return [];
+            }
+            try {
+                const arr = typeof str === "string" ? JSON.parse(str) : str;
+                if (!Array.isArray(arr)) {
+                    return [];
+                }
+                return arr
+                    .map(p => [Number(p[0]), Number(p[1])])
+                    .filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+            } catch {
+                return [];
+            }
+        };
+        const groups = [
+            "divide_area_work",
+            "region_work",
+            "region_channel",
+            "region_obstacle",
+            "region_forbidden",
+            "region_placed_blank",
+            "region_charger_channel",
+        ];
+        let minX = Infinity;
+        let maxX = -Infinity;
+        let minY = Infinity;
+        let maxY = -Infinity;
+        const collected = {};
+        for (const g of groups) {
+            const arr = Array.isArray(mapData[g]) ? mapData[g] : [];
+            collected[g] = arr.map(item => parsePoints(item.points)).filter(p => p.length > 0);
+            for (const pts of collected[g]) {
+                for (const [x, y] of pts) {
+                    if (x < minX) {
+                        minX = x;
+                    }
+                    if (x > maxX) {
+                        maxX = x;
+                    }
+                    if (y < minY) {
+                        minY = y;
+                    }
+                    if (y > maxY) {
+                        maxY = y;
+                    }
+                }
+            }
+        }
+        if (!Number.isFinite(minX) || maxX === minX || maxY === minY) {
+            return null;
+        }
+        const width = maxX - minX;
+        const height = maxY - minY;
+        const SCALE = 25;
+        const MAX_DIM = 1500;
+        let canvasW = Math.max(1, Math.round(width * SCALE));
+        let canvasH = Math.max(1, Math.round(height * SCALE));
+        if (canvasW > MAX_DIM || canvasH > MAX_DIM) {
+            const f = MAX_DIM / Math.max(canvasW, canvasH);
+            canvasW = Math.max(1, Math.round(canvasW * f));
+            canvasH = Math.max(1, Math.round(canvasH * f));
+        }
+        const transform = ([x, y]) => {
+            const xn = (x - minX) / (maxX - minX);
+            const yn = (y - minY) / (maxY - minY);
+            return [Math.round(xn * canvasW), Math.round((1 - yn) * canvasH)];
+        };
+        const bitmap = PImage.make(canvasW, canvasH);
+        const ctx = bitmap.getContext("2d");
+        const drawPoly = (pts, fill, stroke, lineWidth = 1) => {
+            if (!pts || pts.length < 2) {
+                return;
+            }
+            const tp = [];
+            for (const p of pts) {
+                const [x, y] = transform(p);
+                if (tp.length === 0 || tp[tp.length - 1][0] !== x || tp[tp.length - 1][1] !== y) {
+                    tp.push([x, y]);
+                }
+            }
+            while (tp.length > 1 && tp[tp.length - 1][0] === tp[0][0] && tp[tp.length - 1][1] === tp[0][1]) {
+                tp.pop();
+            }
+            if (tp.length < 2) {
+                return;
+            }
+            ctx.beginPath();
+            ctx.moveTo(tp[0][0], tp[0][1]);
+            for (let i = 1; i < tp.length; i++) {
+                ctx.lineTo(tp[i][0], tp[i][1]);
+            }
+            ctx.closePath();
+            if (fill) {
+                ctx.fillStyle = fill;
+                ctx.fill();
+            }
+            if (stroke) {
+                ctx.strokeStyle = stroke;
+                ctx.lineWidth = lineWidth;
+                ctx.stroke();
+            }
+        };
+        for (const pts of collected.region_channel) {
+            drawPoly(pts, "rgba(128,128,128,0.35)", "rgba(128,128,128,1)");
+        }
+        for (const pts of collected.region_work) {
+            drawPoly(pts, "rgba(34,139,34,1)", "rgba(0,0,0,1)");
+        }
+        for (const pts of collected.region_forbidden) {
+            drawPoly(pts, "rgba(240,128,128,0.78)", "rgba(255,0,0,1)");
+        }
+        for (const pts of collected.region_placed_blank) {
+            drawPoly(pts, "rgba(0,0,255,0.59)", "rgba(0,0,255,1)");
+        }
+        for (const pts of collected.divide_area_work) {
+            drawPoly(pts, null, "rgba(0,0,0,1)", 2);
+        }
+        for (const pts of collected.region_obstacle) {
+            drawPoly(pts, "rgba(128,128,128,0.78)", "rgba(169,169,169,1)");
+        }
+        if (Array.isArray(pathData) && pathData.length >= 2) {
+            const pp = [];
+            for (const e of pathData) {
+                if (!Array.isArray(e) || e.length < 2) {
+                    continue;
+                }
+                const [px, py] = transform([e[0], e[1]]);
+                if (pp.length === 0 || pp[pp.length - 1][0] !== px || pp[pp.length - 1][1] !== py) {
+                    pp.push([px, py]);
+                }
+            }
+            if (pp.length >= 2) {
+                ctx.strokeStyle = "rgba(124,252,0,1)";
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(pp[0][0], pp[0][1]);
+                for (let i = 1; i < pp.length; i++) {
+                    ctx.lineTo(pp[i][0], pp[i][1]);
+                }
+                ctx.stroke();
+            }
+        }
+        const charger = mapData.charge_pos && Array.isArray(mapData.charge_pos.point) ? mapData.charge_pos.point : null;
+        if (charger && charger.length >= 2 && (charger[0] !== 0 || charger[1] !== 0)) {
+            const [cx, cy] = transform([charger[0], charger[1]]);
+            ctx.fillStyle = "rgba(255,200,0,1)";
+            ctx.beginPath();
+            ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "rgba(0,0,0,1)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        const chunks = [];
+        const sink = new Writable({
+            write(chunk, _enc, cb) {
+                chunks.push(Buffer.from(chunk));
+                cb();
+            },
+        });
+        await PImage.encodePNGToStream(bitmap, sink);
+        const buf = Buffer.concat(chunks);
+        return `data:image/png;base64,${buf.toString("base64")}`;
     }
 
     /**

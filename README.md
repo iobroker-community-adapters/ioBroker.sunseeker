@@ -68,6 +68,7 @@ For each mower (serial `<sn>`) the adapter creates these channels:
   - `mapData` — map geometry as raw JSON string (zones, polygons — same source HA uses to render its livemap)
   - `pathData` — recorded mowing path as raw JSON string
   - `backup` — backup map JSON (from `/wireless_map/backup_map/get`)
+  - `livemap` — adapter-rendered PNG data URL (zones, obstacles, recorded path, charger position; rendered with `pureimage`)
 
 Raw payloads (REST and MQTT) are written through `json2iob` directly — no parallel adapter-side data model is maintained.
 
