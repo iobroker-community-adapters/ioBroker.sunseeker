@@ -480,6 +480,9 @@ class Sunseeker extends utils.Adapter {
             this.deviceMeta[sn] = {
                 modelClass: this.classifyModel(d.modelName),
                 refreshTimer: undefined,
+                robotPos: null,
+                chargerPos: null,
+                livePath: [],
             };
             this.deviceMeta[sn].cmdurl = this.deviceMeta[sn].modelClass === "V1" ? CMDURL_V1 : CMDURL_SXV;
 
@@ -1182,6 +1185,54 @@ class Sunseeker extends utils.Adapter {
         }, 30000);
     }
 
+    /**
+     * Absorbs MQTT-pushed renderer state (mower pos, charger pos, live path)
+     * into the per-device meta so the next livemap render picks them up.
+     *
+     * @param {any} meta deviceMeta entry
+     * @param {any} statusData MQTT payload (data.data)
+     */
+    absorbLivemapState(meta, statusData) {
+        if (!meta || !statusData || typeof statusData !== "object") {
+            return;
+        }
+        const robot = statusData.robot_pos;
+        if (robot && Array.isArray(robot.point) && robot.point.length >= 2) {
+            const x = Number(robot.point[0]);
+            const y = Number(robot.point[1]);
+            if (Number.isFinite(x) && Number.isFinite(y)) {
+                meta.robotPos = { x, y, angle: Number(robot.angle) || 0 };
+            }
+        }
+        const charger = statusData.charge_pos;
+        if (charger && Array.isArray(charger.point) && charger.point.length >= 2) {
+            const x = Number(charger.point[0]);
+            const y = Number(charger.point[1]);
+            if (Number.isFinite(x) && Number.isFinite(y) && (x !== 0 || y !== 0)) {
+                meta.chargerPos = { x, y, angle: Number(charger.angle) || 0 };
+            }
+        }
+        const pathInfo = statusData.path_info;
+        if (pathInfo && Array.isArray(pathInfo.path)) {
+            if (!Array.isArray(meta.livePath)) {
+                meta.livePath = [];
+            }
+            for (const p of pathInfo.path) {
+                if (!Array.isArray(p) || p.length < 2) {
+                    continue;
+                }
+                const x = Number(p[0]);
+                const y = Number(p[1]);
+                if (Number.isFinite(x) && Number.isFinite(y)) {
+                    meta.livePath.push([x, y]);
+                }
+            }
+            if (meta.livePath.length > 5000) {
+                meta.livePath.splice(0, meta.livePath.length - 5000);
+            }
+        }
+    }
+
     onMqttMessage(topic, payload) {
         let data;
         try {
@@ -1203,6 +1254,7 @@ class Sunseeker extends utils.Adapter {
             states: this.statesForDevice(sn),
         });
         const meta = this.deviceMeta[sn];
+        this.absorbLivemapState(meta, statusData);
         if (meta.refreshTimer) {
             this.clearTimeout(meta.refreshTimer);
         }
@@ -1364,35 +1416,61 @@ class Sunseeker extends utils.Adapter {
                 forceIndex: false,
             });
             const newMapId = data.mapModifyTime;
-            if (newMapId !== undefined && newMapId === meta.mapid) {
-                this.log.debug(`fetchMap ${sn}: mapModifyTime ${newMapId} unverändert, kein Re-Download`);
-                return;
-            }
+            const mapChanged = newMapId !== undefined && newMapId !== meta.mapid;
             if (newMapId !== undefined) {
-                this.log.debug(`fetchMap ${sn}: mapModifyTime ${meta.mapid || "?"} -> ${newMapId}`);
-                meta.mapid = newMapId;
+                if (mapChanged) {
+                    this.log.debug(`fetchMap ${sn}: mapModifyTime ${meta.mapid || "?"} -> ${newMapId}`);
+                    meta.mapid = newMapId;
+                    meta.livePath = [];
+                } else {
+                    this.log.debug(`fetchMap ${sn}: mapModifyTime ${newMapId} unverändert`);
+                }
             }
 
-            const heat = await this.request(
-                "GET",
-                `/wireless_map/wireless_device/getHeatMap?deviceSn=${encodeURIComponent(sn)}`,
-                this.authHeaders(),
-            );
-            const heatData = heat.json && heat.json.data;
-            if (heatData) {
-                this.log.debug(
-                    `fetchMap ${sn}: heatmap urls image=${!!heatData.url} wifi=${!!heatData.wifiUrl} net=${!!heatData.netUrl} texture=${!!heatData.textureUrl}`,
+            if (mapChanged || !meta.mapJson) {
+                const heat = await this.request(
+                    "GET",
+                    `/wireless_map/wireless_device/getHeatMap?deviceSn=${encodeURIComponent(sn)}`,
+                    this.authHeaders(),
                 );
-                await this.fetchMapImage(sn, "image", heatData.url);
-                await this.fetchMapImage(sn, "wifi", heatData.wifiUrl);
-                await this.fetchMapImage(sn, "net", heatData.netUrl);
-                await this.fetchMapImage(sn, "texture", heatData.textureUrl);
+                const heatData = heat.json && heat.json.data;
+                if (heatData) {
+                    this.log.debug(
+                        `fetchMap ${sn}: heatmap urls image=${!!heatData.url} wifi=${!!heatData.wifiUrl} net=${!!heatData.netUrl} texture=${!!heatData.textureUrl}`,
+                    );
+                    await this.fetchMapImage(sn, "image", heatData.url);
+                    await this.fetchMapImage(sn, "wifi", heatData.wifiUrl);
+                    await this.fetchMapImage(sn, "net", heatData.netUrl);
+                    await this.fetchMapImage(sn, "texture", heatData.textureUrl);
+                }
+                meta.mapJson = await this.fetchMapJson(sn, "mapData", data.mapPathFileUrl);
+                meta.pathJson = await this.fetchMapJson(sn, "pathData", data.realPathFileUlr || data.realPathFileUrl);
+                const backup = await this.request(
+                    "GET",
+                    `/wireless_map/backup_map/get?sn=${encodeURIComponent(sn)}`,
+                    this.authHeaders(),
+                );
+                if (backup.json && backup.json.data) {
+                    await this.extendObject(`${sn}.map.backup`, {
+                        type: "state",
+                        common: {
+                            name: "Backup-Karte (JSON)",
+                            type: "string",
+                            role: "json",
+                            read: true,
+                            write: false,
+                        },
+                        native: {},
+                    });
+                    this.setState(`${sn}.map.backup`, JSON.stringify(backup.json.data), true);
+                    this.log.debug(`fetchMap ${sn}: Backup-Karte geschrieben`);
+                }
             }
-            const mapJson = await this.fetchMapJson(sn, "mapData", data.mapPathFileUrl);
-            const pathJson = await this.fetchMapJson(sn, "pathData", data.realPathFileUlr || data.realPathFileUrl);
             try {
-                this.log.debug(`fetchMap ${sn}: Livemap rendern (mapData=${!!mapJson} pathData=${!!pathJson})`);
-                const dataUrl = await this.renderLivemap(mapJson, pathJson);
+                this.log.debug(
+                    `fetchMap ${sn}: Livemap rendern (mapData=${!!meta.mapJson} pathData=${!!meta.pathJson} live=${meta.livePath ? meta.livePath.length : 0})`,
+                );
+                const dataUrl = await this.renderLivemap(meta.mapJson, meta.pathJson, meta);
                 if (dataUrl) {
                     await this.extendObject(`${sn}.map.livemap`, {
                         type: "state",
@@ -1412,26 +1490,6 @@ class Sunseeker extends utils.Adapter {
                 }
             } catch (err) {
                 this.log.debug(`Livemap render ${sn}: ${err.message}`);
-            }
-            const backup = await this.request(
-                "GET",
-                `/wireless_map/backup_map/get?sn=${encodeURIComponent(sn)}`,
-                this.authHeaders(),
-            );
-            if (backup.json && backup.json.data) {
-                await this.extendObject(`${sn}.map.backup`, {
-                    type: "state",
-                    common: {
-                        name: "Backup-Karte (JSON)",
-                        type: "string",
-                        role: "json",
-                        read: true,
-                        write: false,
-                    },
-                    native: {},
-                });
-                this.setState(`${sn}.map.backup`, JSON.stringify(backup.json.data), true);
-                this.log.debug(`fetchMap ${sn}: Backup-Karte geschrieben`);
             }
         } finally {
             meta.mapInFlight = false;
@@ -1485,36 +1543,29 @@ class Sunseeker extends utils.Adapter {
     }
 
     /**
-     * Render a livemap (map polygons + recorded path + charger position) into a PNG data URL.
+     * Render a livemap (map polygons + recorded path + live MQTT path + mower
+     * + charger) into a PNG data URL. Shapes are projected with a Y-flip; the
+     * mower and (oriented) charger are drawn from MQTT-pushed state.
      *
      * @param {any} mapData parsed JSON of /wireless_map/wireless_device/get -> mapPathFileUrl
      * @param {any} pathData parsed JSON of /wireless_map/wireless_device/get -> realPathFileUlr (array of [x,y,code])
+     * @param {any} [meta] deviceMeta entry providing robotPos / chargerPos / livePath
      * @returns {Promise<string|null>}
      */
-    async renderLivemap(mapData, pathData) {
+    async renderLivemap(mapData, pathData, meta) {
         if (!mapData || typeof mapData !== "object") {
             return null;
         }
-        const origWarn = console.warn;
-        console.warn = (...args) => {
-            if (typeof args[0] === "string" && args[0].startsWith("can't project the same paths")) {
-                return;
-            }
-            origWarn(...args);
-        };
-        try {
-            return await this.renderLivemapInner(mapData, pathData);
-        } finally {
-            console.warn = origWarn;
-        }
+        return this.renderLivemapInner(mapData, pathData, meta);
     }
 
     /**
      * @param {any} mapData parsed mapData JSON
      * @param {any} pathData parsed pathData JSON
+     * @param {any} [meta] deviceMeta entry
      * @returns {Promise<string|null>}
      */
-    async renderLivemapInner(mapData, pathData) {
+    async renderLivemapInner(mapData, pathData, meta) {
         const parsePoints = str => {
             if (!str) {
                 return [];
@@ -1538,7 +1589,6 @@ class Sunseeker extends utils.Adapter {
             "region_obstacle",
             "region_forbidden",
             "region_placed_blank",
-            "region_charger_channel",
         ];
         let minX = Infinity;
         let maxX = -Infinity;
@@ -1586,10 +1636,8 @@ class Sunseeker extends utils.Adapter {
         };
         const bitmap = PImage.make(canvasW, canvasH);
         const ctx = bitmap.getContext("2d");
-        const drawPoly = (pts, fill, stroke, lineWidth = 1) => {
-            if (!pts || pts.length < 2) {
-                return;
-            }
+
+        const dedup = pts => {
             const tp = [];
             for (const p of pts) {
                 const [x, y] = transform(p);
@@ -1597,10 +1645,19 @@ class Sunseeker extends utils.Adapter {
                     tp.push([x, y]);
                 }
             }
+            return tp;
+        };
+
+        const drawPoly = (pts, fill, stroke, lineWidth = 1) => {
+            if (!pts || pts.length < 2) {
+                return;
+            }
+            const tp = dedup(pts);
             while (tp.length > 1 && tp[tp.length - 1][0] === tp[0][0] && tp[tp.length - 1][1] === tp[0][1]) {
                 tp.pop();
             }
-            if (tp.length < 2) {
+            const minPoints = fill ? 3 : 2;
+            if (tp.length < minPoints) {
                 return;
             }
             ctx.beginPath();
@@ -1619,6 +1676,66 @@ class Sunseeker extends utils.Adapter {
                 ctx.stroke();
             }
         };
+
+        const drawPolyline = (worldPts, color, lineWidth = 1) => {
+            if (!Array.isArray(worldPts) || worldPts.length < 2) {
+                return;
+            }
+            const pp = [];
+            for (const e of worldPts) {
+                if (!Array.isArray(e) || e.length < 2) {
+                    continue;
+                }
+                const [px, py] = transform([e[0], e[1]]);
+                if (pp.length === 0 || pp[pp.length - 1][0] !== px || pp[pp.length - 1][1] !== py) {
+                    pp.push([px, py]);
+                }
+            }
+            if (pp.length < 2) {
+                return;
+            }
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.beginPath();
+            ctx.moveTo(pp[0][0], pp[0][1]);
+            for (let i = 1; i < pp.length; i++) {
+                ctx.lineTo(pp[i][0], pp[i][1]);
+            }
+            ctx.stroke();
+        };
+
+        // Oriented arrow head at world (x, y) with world-frame angle (radians).
+        // Tip points along the world +X axis at angle 0; positive angle rotates
+        // counter-clockwise in world space (Y-flip during transform).
+        const drawArrow = (worldX, worldY, angle, size, fill, stroke) => {
+            const [cx, cy] = transform([worldX, worldY]);
+            const a = Number.isFinite(angle) ? angle : 0;
+            const cos = Math.cos(a);
+            const sin = Math.sin(a);
+            // Arrow in local frame: tip at (size, 0), rear corners at (-0.6s, ±0.5s)
+            const local = [
+                [size, 0],
+                [-size * 0.6, size * 0.5],
+                [-size * 0.6, -size * 0.5],
+            ];
+            const pts = local.map(([lx, ly]) => {
+                const wx = lx * cos - ly * sin;
+                const wy = lx * sin + ly * cos;
+                // World-to-pixel: x stays, y flips
+                return [Math.round(cx + wx), Math.round(cy - wy)];
+            });
+            ctx.beginPath();
+            ctx.moveTo(pts[0][0], pts[0][1]);
+            ctx.lineTo(pts[1][0], pts[1][1]);
+            ctx.lineTo(pts[2][0], pts[2][1]);
+            ctx.closePath();
+            ctx.fillStyle = fill;
+            ctx.fill();
+            ctx.strokeStyle = stroke;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        };
+
         for (const pts of collected.region_channel) {
             drawPoly(pts, "rgba(128,128,128,0.35)", "rgba(128,128,128,1)");
         }
@@ -1637,41 +1754,43 @@ class Sunseeker extends utils.Adapter {
         for (const pts of collected.region_obstacle) {
             drawPoly(pts, "rgba(128,128,128,0.78)", "rgba(169,169,169,1)");
         }
-        if (Array.isArray(pathData) && pathData.length >= 2) {
-            const pp = [];
-            for (const e of pathData) {
-                if (!Array.isArray(e) || e.length < 2) {
-                    continue;
-                }
-                const [px, py] = transform([e[0], e[1]]);
-                if (pp.length === 0 || pp[pp.length - 1][0] !== px || pp[pp.length - 1][1] !== py) {
-                    pp.push([px, py]);
-                }
-            }
-            if (pp.length >= 2) {
-                ctx.strokeStyle = "rgba(124,252,0,1)";
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(pp[0][0], pp[0][1]);
-                for (let i = 1; i < pp.length; i++) {
-                    ctx.lineTo(pp[i][0], pp[i][1]);
-                }
-                ctx.stroke();
+        if (Array.isArray(pathData)) {
+            drawPolyline(pathData, "rgba(124,252,0,1)");
+        }
+        const livePath = meta && Array.isArray(meta.livePath) ? meta.livePath : null;
+        if (livePath && livePath.length >= 2) {
+            drawPolyline(livePath, "rgba(124,252,0,1)");
+        }
+
+        // Charger: prefer MQTT-pushed pos, fall back to static map data.
+        let chargerWorld = null;
+        let chargerAngle = 0;
+        if (meta && meta.chargerPos) {
+            chargerWorld = [meta.chargerPos.x, meta.chargerPos.y];
+            chargerAngle = meta.chargerPos.angle || 0;
+        } else if (mapData.charge_pos && Array.isArray(mapData.charge_pos.point)) {
+            const pt = mapData.charge_pos.point;
+            if (pt.length >= 2 && (pt[0] !== 0 || pt[1] !== 0)) {
+                chargerWorld = [Number(pt[0]), Number(pt[1])];
+                chargerAngle = Number(mapData.charge_pos.angle) || 0;
             }
         }
-        const charger = mapData.charge_pos && Array.isArray(mapData.charge_pos.point) ? mapData.charge_pos.point : null;
-        if (charger && charger.length >= 2 && (charger[0] !== 0 || charger[1] !== 0)) {
-            const [cx, cy] = transform([charger[0], charger[1]]);
-            ctx.fillStyle = "rgba(255,200,0,1)";
-            ctx.beginPath();
-            ctx.arc(cx, cy, 6, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = "rgba(0,0,0,1)";
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.arc(cx, cy, 6, 0, Math.PI * 2);
-            ctx.stroke();
+        if (chargerWorld && Number.isFinite(chargerWorld[0]) && Number.isFinite(chargerWorld[1])) {
+            drawArrow(chargerWorld[0], chargerWorld[1], chargerAngle, 9, "rgba(255,200,0,1)", "rgba(0,0,0,1)");
         }
+
+        // Mower (only available via MQTT).
+        if (meta && meta.robotPos && Number.isFinite(meta.robotPos.x) && Number.isFinite(meta.robotPos.y)) {
+            drawArrow(
+                meta.robotPos.x,
+                meta.robotPos.y,
+                meta.robotPos.angle || 0,
+                10,
+                "rgba(255,0,0,1)",
+                "rgba(0,0,0,1)",
+            );
+        }
+
         const chunks = [];
         const sink = new Writable({
             write(chunk, _enc, cb) {
