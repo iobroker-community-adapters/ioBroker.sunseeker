@@ -162,6 +162,8 @@ All paths originate from `Sunseeker Robot_1.4.1_APKPure` (`ApiServiceWireless.sm
 
 - (TA2k) initial release
 
+[Older changelogs can be found there](CHANGELOG_OLD.md)
+
 ## License
 
 MIT License
