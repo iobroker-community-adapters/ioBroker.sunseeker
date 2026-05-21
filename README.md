@@ -128,6 +128,7 @@ The Sunseeker API exposes far more fields than the adapter currently writes. All
 -->
 
 ### **WORK IN PROGRESS**
+- (ioBroker-Bot) Adapter requires admin >= 7.8.23 now.
 
 ### 0.0.1
 
