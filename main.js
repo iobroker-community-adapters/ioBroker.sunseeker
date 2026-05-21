@@ -630,7 +630,7 @@ class Sunseeker extends utils.Adapter {
                 forceIndex: false,
                 states,
             });
-            await this.ensureBladeWritable(sn, settings.json.data);
+            await this.ensureWritableSettings(sn, settings.json.data);
         }
         if (this.config.apptype !== "Old") {
             const meta = this.deviceMeta[sn];
@@ -644,7 +644,7 @@ class Sunseeker extends utils.Adapter {
      * @param {string} sn
      * @param {Record<string, any>} settingsData
      */
-    async ensureBladeWritable(sn, settingsData) {
+    async ensureWritableSettings(sn, settingsData) {
         if (!settingsData) {
             return;
         }
