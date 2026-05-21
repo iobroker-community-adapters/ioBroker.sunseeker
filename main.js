@@ -587,7 +587,7 @@ class Sunseeker extends utils.Adapter {
         const settingsPath =
             this.config.apptype === "Old"
                 ? `/mower/device-setting/${encodeURIComponent(sn)}`
-                : `/app_wireless_mower/device/info/${encodeURIComponent(dev.deviceId)}`;
+                : `/app_wireless_mower/device-setting/${encodeURIComponent(sn)}`;
 
         const states = this.statesForDevice(sn);
         const status = await this.request("GET", statusPath, this.authHeaders());
