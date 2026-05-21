@@ -1243,15 +1243,64 @@ class Sunseeker extends utils.Adapter {
                 this.authHeaders(),
             );
             const heatData = heat.json && heat.json.data;
-            if (!heatData) {
-                return;
+            if (heatData) {
+                await this.fetchMapImage(sn, "image", heatData.url);
+                await this.fetchMapImage(sn, "wifi", heatData.wifiUrl);
+                await this.fetchMapImage(sn, "net", heatData.netUrl);
+                await this.fetchMapImage(sn, "texture", heatData.textureUrl);
             }
-            await this.fetchMapImage(sn, "image", heatData.url);
-            await this.fetchMapImage(sn, "wifi", heatData.wifiUrl);
-            await this.fetchMapImage(sn, "net", heatData.netUrl);
+            await this.fetchMapJson(sn, "mapData", data.mapPathFileUrl);
+            await this.fetchMapJson(sn, "pathData", data.realPathFileUlr || data.realPathFileUrl);
+            const backup = await this.request(
+                "GET",
+                `/wireless_map/backup_map/get?sn=${encodeURIComponent(sn)}`,
+                this.authHeaders(),
+            );
+            if (backup.json && backup.json.data) {
+                await this.extendObject(`${sn}.map.backup`, {
+                    type: "state",
+                    common: {
+                        name: "Backup-Karte (JSON)",
+                        type: "string",
+                        role: "json",
+                        read: true,
+                        write: false,
+                    },
+                    native: {},
+                });
+                this.setState(`${sn}.map.backup`, JSON.stringify(backup.json.data), true);
+            }
         } finally {
             meta.mapInFlight = false;
         }
+    }
+
+    /**
+     * @param {string} sn
+     * @param {string} name
+     * @param {string} url
+     */
+    async fetchMapJson(sn, name, url) {
+        if (!url) {
+            return;
+        }
+        const res = await axios.get(url, { timeout: 30000, validateStatus: () => true });
+        if (res.status !== 200 || res.data == null) {
+            return;
+        }
+        const payload = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
+        await this.extendObject(`${sn}.map.${name}`, {
+            type: "state",
+            common: {
+                name: `Karten-${name} (JSON)`,
+                type: "string",
+                role: "json",
+                read: true,
+                write: false,
+            },
+            native: {},
+        });
+        this.setState(`${sn}.map.${name}`, payload, true);
     }
 
     /**
