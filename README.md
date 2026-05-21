@@ -115,6 +115,34 @@ The Sunseeker API exposes far more fields than the adapter currently writes. All
 - Gen2 settings: auto_ride_edge, energy_save, night_work
 - AI sensitivity, PIN code, map operations
 
+## API overview
+
+The following REST families were extracted from the official app decompile (`com.sunseeker.robot` 1.4.1). The adapter currently uses only a small subset; the rest is listed for reference and as a roadmap for future extensions.
+
+| Area | Endpoints | Used? |
+| --- | --- | --- |
+| Auth | `POST /auth/oauth/token` (login + refresh), `auth/mobile/token/social` | Yes |
+| Device list | `GET /app_wireless_mower/device-user/getCustomDevice`, `…/list`, `…/{id}`, `…/remark` | Yes (`getCustomDevice`) |
+| Status | `GET /app_wireless_mower/device/getBysn`, `…/info/{id}`, `…/check`, `…/readWeakSignal`, `…/getSignalType` | Yes (`getBysn`) |
+| Settings (read) | `GET /app_wireless_mower/device-setting/{sn}`, `…/getTime/{sn}`, `device/getDeviceSettingBySn`, `device-configuration/getBySn/{sn}`, `device-model/getByClientName` | Yes (`device-setting/{sn}`) |
+| Settings (write, New) | `POST /iot_mower/wireless/device/set_property` (S/X/V), `POST /app_wirelessv1_mower/wirelessv1/device/setProperty` (V1), `POST /app_wireless_mower/device/setRain/{sn}/{appId}`, `…/setWifi`, `…/appEditDevice` | Partial (`set_property` for blade) |
+| Settings (write, Old) | `POST /app_mower/device-setting/save`, `…/updateLocation`, `…/updateTimeZone`, `device/setLed`, `…/saveLed`, `…/setRain`, `…/saveRain`, `…/setUltra`, `…/saveUltra`, `…/setZones`, `…/setNickName`, `…/setGps`, `…/setCurrentTime`, `…/setWorkStatus`, `…/resetPassword` | No |
+| Schedule | `POST /app_mower/device-schedule/setScheduling` (Old), `app_mower/device-schedule/save`, `app_mower/device/getScheduling`, `POST /app_wireless_mower/.../setProperty` with `setSchedule` (V1) and `set_property` with `setTimeTactics` (S/X/V) | Yes (all three paths) |
+| MQTT proxy via REST | `POST /iot_mower/wireless/device/get_property`, `…/set_property`, `…/action`, `…/extra`, `…/otaUpgrade`, `…/bindBaseStation` | Yes (`get_property` after connect) |
+| Maps | `GET /wireless_map/wireless_device/get`, `…/getHeatMap`, `…/get3D`, `wireless_map/backup_map/get`, `map/work-map/mobile/{sn}`, `…/newest/{online}/{sn}`, `…/all-info`, `app_wireless_mower/device/getMapRealPath` | Yes (`get` + `getHeatMap`) |
+| Work records | `GET /app_wireless_mower/work_record/page`, `…/work_event_info/page`, `device_log/device-operation-records/esPage`, `app_mower/device-record/getRecord/{sn}`, `app_mower/device-cmd-logs/page` | No |
+| Anti-theft / GPS | `gps/mobile/anti-theft/by-sn/{sn}`, `…/device-position/{sn}`, `…/getAntiTheftStatusInfo`, `…/is-it-bound`, `…/set-fence`, `…/wireless/bind`, `gps/anti-theft/send-track`, `gps/fence-radius-setting/list` | No |
+| Base station | `station/base-station/bind`, `…/unBind`, `…/getByDeviceSn`, `…/getByStationSn/{sn}` | No |
+| OTA | `ota/firmware-large/check/{sn}/{ver}`, `…/getDescription`, `…/otaUpdate`, `…/wireless/check`, `ota/firmware-small/list/{id}` | No |
+| Sharing | `app_wireless_mower/device-user-share`, `…/invite/detail`, `…/invite/reply`, `…/unbind`, `device-user/openShare`, `…/closeShare` | No |
+| Skins / cosmetics | `app_wireless_mower/device-skin`, `…/list`, `…/bind/switch{userId}/{id}` | No |
+| Payment | `pay/v1/mobile/combo/*`, `pay/v1/mobile/order/*`, `pay/v1/paypal/*`, `pay/v1/user/card/holder*` | No |
+| Misc | `app_wireless_mower/feedback-record`, `community_activities/*`, `message-send-logs/*`, `app-version/check`, `app-agreements/business-types/{type}/items`, `sale/manual/getManualBySn`, `link-address/list/{type}` | No |
+
+V1-specific (`app_wirelessv1_mower/wirelessv1/`): `device-setting`, `device-setting/{sn}`, `device-schedule/{deviceId}`, `device/getProperty`, `device/setProperty`, `device/saveProperty`, `device/restoreFactory`.
+
+All paths originate from `Sunseeker Robot_1.4.1_APKPure` (`ApiServiceWireless.smali`, `ApiServiceV1.smali`); the official app is the only source — there is no public API documentation.
+
 ## References
 
 - Home Assistant integration used as the API reference: <https://github.com/Bouni/sunseeker-lawn-mower>
