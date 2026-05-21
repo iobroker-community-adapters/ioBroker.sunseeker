@@ -54,10 +54,11 @@ Which API to pick depends on the model:
 
 For each mower (serial `<sn>`) the adapter creates these channels:
 
-- `<sn>.list` — raw device info from the device list
+- `<sn>.general` — raw device metadata from the device list (account ids, model, serial)
 - `<sn>.status` — mower status (poll **and** MQTT push write into the same folder)
 - `<sn>.settings` — device settings
 - `<sn>.remote` — command buttons
+- `<sn>.schedule` — weekly plan (writable, see below)
 
 Raw payloads (REST and MQTT) are written through `json2iob` directly — no parallel adapter-side data model is maintained.
 

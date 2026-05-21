@@ -466,8 +466,9 @@ class Sunseeker extends utils.Adapter {
                 common: { name: d.deviceName || sn },
                 native: {},
             });
-            await this.json2iob.parse(`${sn}.list`, d, {
-                channelName: "Geräteliste",
+            await this.delObjectAsync(`${sn}.list`, { recursive: true }).catch(() => {});
+            await this.json2iob.parse(`${sn}.general`, d, {
+                channelName: "Allgemein",
                 forceIndex: false,
             });
             await this.ensureRemoteButtons(sn);
