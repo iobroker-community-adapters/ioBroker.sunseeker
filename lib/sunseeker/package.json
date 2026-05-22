@@ -3,7 +3,7 @@
     "version": "0.1.0",
     "private": true,
     "description": "Pure Node.js client for the Sunseeker mower cloud (REST + MQTT, optional pureimage livemap rendering)",
-    "main": "main.js",
+    "main": "index.js",
     "engines": {
         "node": ">=18"
     },
