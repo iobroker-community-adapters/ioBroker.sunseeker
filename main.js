@@ -142,13 +142,37 @@ class SunseekerAdapter extends utils.Adapter {
             });
         }
         if (settings) {
-            await this.json2iob.parse(`${sn}.settings`, settings, {
+            const normalized = this.normalizeSettings(settings);
+            await this.ensureWritableSettings(sn, normalized);
+            await this.json2iob.parse(`${sn}.settings`, normalized, {
                 channelName: "Einstellungen",
                 forceIndex: false,
                 states,
             });
-            await this.ensureWritableSettings(sn, settings);
         }
+    }
+
+    /**
+     * Coerce numeric/boolean settings fields to their canonical types so
+     * json2iob and the typed states defined in ensureWritableSettings agree.
+     *
+     * @param {Record<string, any>} settings
+     */
+    normalizeSettings(settings) {
+        const out = { ...settings };
+        for (const key of ["bladeSpeed", "bladeHeight", "rainDelayDuration"]) {
+            if (out[key] !== undefined && out[key] !== null && out[key] !== "") {
+                const n = Number(out[key]);
+                if (Number.isFinite(n)) {
+                    out[key] = n;
+                }
+            }
+        }
+        if (out.rainFlag !== undefined && out.rainFlag !== null) {
+            out.rainFlag =
+                out.rainFlag === true || out.rainFlag === "true" || out.rainFlag === 1 || out.rainFlag === "1";
+        }
+        return out;
     }
 
     onSunseekerMqtt({ sn, data }) {
