@@ -33,6 +33,10 @@ class SunseekerAdapter extends utils.Adapter {
         this.json2iob = new Json2iob(this);
         /** @type {Sunseeker | null} */
         this.sunseeker = null;
+        this.updateDeviceCommand = null;
+        this.updateDeviceRain = null;
+        this.updateDeviceBlade = null;
+        this.updateDeviceSet = null;
     }
 
     async onReady() {
@@ -45,10 +49,17 @@ class SunseekerAdapter extends utils.Adapter {
         }
 
         const logger = {
-            info: m => this.log.info(m),
-            warn: m => this.log.warn(m),
-            error: m => this.log.error(m),
-            debug: m => this.log.debug(m),
+            info: (/** @type {string} */ m) => this.log.info(m),
+            warn: (/** @type {string} */ m) => this.log.warn(m),
+            error: (/** @type {string} */ m) => this.log.error(m),
+            debug: (/** @type {string} */ m) => this.log.debug(m),
+        };
+
+        const iobTimers = {
+            setTimeout: (/** @type {any} */ c, /** @type {number} */ t) => this.setTimeout(c, t),
+            clearTimeout: (/** @type {ioBroker.Timeout | undefined} */ x) => this.clearTimeout(x),
+            setInterval: (/** @type {any} */ c, /** @type {number} */ t) => this.setInterval(c, t),
+            clearInterval: (/** @type {ioBroker.Interval | undefined} */ x) => this.clearInterval(x),
         };
 
         this.sunseeker = new Sunseeker(cfg.username, cfg.password, {
@@ -56,7 +67,9 @@ class SunseekerAdapter extends utils.Adapter {
             apptype: cfg.apptype || "New",
             language: cfg.language || "de-DE",
             interval: Number(cfg.interval) > 0 ? Number(cfg.interval) : 300,
+            refreshAfterMqttMs: 1500,
             logger,
+            iobTimers,
         });
 
         this.sunseeker.on("devices", payload => this.onSunseekerDevices(payload));
@@ -85,12 +98,21 @@ class SunseekerAdapter extends utils.Adapter {
         }
     }
 
+    /**
+     * Is called when adapter shuts down - callback has to be called under any circumstances!
+     *
+     * @param {() => void} callback - Callback function
+     */
     async onUnload(callback) {
         try {
             if (this.sunseeker) {
                 this.sunseeker.stop();
                 this.sunseeker = null;
             }
+            this.updateDeviceCommand && this.clearTimeout(this.updateDeviceCommand);
+            this.updateDeviceRain && this.clearTimeout(this.updateDeviceRain);
+            this.updateDeviceBlade && this.clearTimeout(this.updateDeviceBlade);
+            this.updateDeviceSet && this.clearTimeout(this.updateDeviceSet);
             this.setState("info.connection", false, true);
             callback();
         } catch (error) {
@@ -99,6 +121,9 @@ class SunseekerAdapter extends utils.Adapter {
         }
     }
 
+    /**
+     * @param {string} sn
+     */
     statesForDevice(sn) {
         if (!this.sunseeker) {
             return { errortype: { ...ERRORTYPE_LABELS } };
@@ -271,7 +296,10 @@ class SunseekerAdapter extends utils.Adapter {
                 try {
                     const plan = await this.collectSchedulePlan(sn);
                     await this.sunseeker.setSchedule(sn, plan);
-                    this.setTimeout(() => this.sunseeker?.updateDevice(sn).catch(() => {}), 1500);
+                    this.updateDeviceSet = this.setTimeout(
+                        () => this.sunseeker?.updateDevice(sn).catch(() => {}),
+                        1500,
+                    );
                     this.setState(id, { val: false, ack: true });
                 } catch (err) {
                     this.log.error(`Zeitplan für ${sn} fehlgeschlagen: ${err.message}`);
@@ -289,7 +317,10 @@ class SunseekerAdapter extends utils.Adapter {
                 const key = leaf === "bladeSpeed" ? "speed" : "height";
                 try {
                     await this.sunseeker.setBlade(sn, key, Number(state.val));
-                    this.setTimeout(() => this.sunseeker?.updateDevice(sn).catch(() => {}), 1500);
+                    this.updateDeviceBlade = this.setTimeout(
+                        () => this.sunseeker?.updateDevice(sn).catch(() => {}),
+                        1500,
+                    );
                     this.setState(id, { val: state.val, ack: true });
                 } catch (err) {
                     this.log.error(`Klingen-${key} für ${sn} fehlgeschlagen: ${err.message}`);
@@ -305,7 +336,10 @@ class SunseekerAdapter extends utils.Adapter {
                             ? state.val
                             : (await this.getStateAsync(`${sn}.settings.rainDelayDuration`))?.val;
                     await this.sunseeker.setRain(sn, Boolean(flagVal), Math.round(Number(durVal) || 0));
-                    this.setTimeout(() => this.sunseeker?.updateDevice(sn).catch(() => {}), 1500);
+                    this.updateDeviceRain = this.setTimeout(
+                        () => this.sunseeker?.updateDevice(sn).catch(() => {}),
+                        1500,
+                    );
                     this.setState(id, { val: state.val, ack: true });
                 } catch (err) {
                     this.log.error(`Regenverzögerung für ${sn} fehlgeschlagen: ${err.message}`);
@@ -328,7 +362,10 @@ class SunseekerAdapter extends utils.Adapter {
                 await this.sunseeker.updateDevice(sn);
             } else {
                 await this.sunseeker.sendCommand(sn, command, state.val);
-                this.setTimeout(() => this.sunseeker?.updateDevice(sn).catch(() => {}), 1500);
+                this.updateDeviceCommand = this.setTimeout(
+                    () => this.sunseeker?.updateDevice(sn).catch(() => {}),
+                    1500,
+                );
             }
             this.setState(id, { val: state.val, ack: true });
         } catch (err) {
@@ -336,6 +373,9 @@ class SunseekerAdapter extends utils.Adapter {
         }
     }
 
+    /**
+     * @param {string} sn
+     */
     async collectSchedulePlan(sn) {
         const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
         const plan = {};
@@ -348,6 +388,9 @@ class SunseekerAdapter extends utils.Adapter {
         return plan;
     }
 
+    /**
+     * @param {string} sn
+     */
     async ensureRemoteButtons(sn) {
         await this.extendObject(`${sn}.remote`, {
             type: "channel",
@@ -381,6 +424,9 @@ class SunseekerAdapter extends utils.Adapter {
         }
     }
 
+    /**
+     * @param {string} sn
+     */
     async ensureScheduleStates(sn) {
         await this.extendObject(`${sn}.schedule`, {
             type: "channel",

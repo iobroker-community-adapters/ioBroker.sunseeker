@@ -11,13 +11,21 @@ interface Logger {
     debug: (m: string) => void;
 }
 
+interface IobTimers {
+    setTimeout: (c: any, t: number) => void;
+    clearTimeout: (x: ioBroker.Timeout) => void;
+    setInterval: (c: any, t: number) => void;
+    clearInterval: (x: ioBroker.Interval) => void;
+}
+
 interface SunseekerOptions {
-    region?: string;
-    apptype?: string;
-    language?: string;
-    interval?: number;
-    refreshAfterMqttMs?: number;
-    logger?: Logger;
+    region: string;
+    apptype: string;
+    language: string;
+    interval: number;
+    refreshAfterMqttMs: number;
+    logger: Logger;
+    iobTimers: IobTimers;
 }
 
 declare class Sunseeker extends EventEmitter {
@@ -25,8 +33,9 @@ declare class Sunseeker extends EventEmitter {
 
     username: string;
     password: string;
-    options: Required<Omit<SunseekerOptions, "logger">>;
+    options: SunseekerOptions;
     log: Logger;
+    iobTimer: IobTimers;
 
     session: any;
     devicesRaw: Record<string, any>;
