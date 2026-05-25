@@ -122,6 +122,8 @@ class SunseekerAdapter extends utils.Adapter {
     }
 
     /**
+     * States for Device
+     *
      * @param {string} sn
      */
     statesForDevice(sn) {
@@ -130,9 +132,34 @@ class SunseekerAdapter extends utils.Adapter {
         }
         const meta = this.sunseeker.deviceMeta[sn];
         const events = this.sunseeker.getEventCodes(meta && meta.modelClass);
+        const states = {
+            0: `${meta && meta.modelClass == "X" && meta.modelClass == "S" ? "unknown" : "standby"}`,
+            1: `${meta && meta.modelClass == "X" && meta.modelClass == "S" ? "idle" : "mowing"}`,
+            2: `${meta && meta.modelClass == "X" && meta.modelClass == "S" ? "working" : "going home"}`,
+            3: `${meta && meta.modelClass == "X" && meta.modelClass == "S" ? "pause" : "charging"}`,
+            4: "unknown",
+            5: "unknown",
+            6: "error",
+            7: `${meta && meta.modelClass == "X" && meta.modelClass == "S" ? "return" : "mowing border"}`,
+            8: "pause",
+            9: "charging",
+            10: "charging full",
+            11: "unknown",
+            12: "unknown",
+            13: "offline",
+            14: "continue cutting",
+            15: "location",
+            16: "firmware update",
+            17: "stuck",
+            18: "stop",
+            19: "unknown",
+            20: "enter pin",
+        };
         return {
             event_code: { ...events },
             errortype: { ...ERRORTYPE_LABELS },
+            faultStatusCode: { ...ERRORTYPE_LABELS },
+            status: states,
         };
     }
 
@@ -147,6 +174,30 @@ class SunseekerAdapter extends utils.Adapter {
                 common: { name: d.deviceName || sn },
                 native: {},
             });
+            if (this.sunseeker) {
+                const meta = this.sunseeker.deviceMeta[sn];
+                if (meta && (meta.modelClass === "S" || d.modelClass === "X")) {
+                    await this.extendObject(`${sn}.map`, {
+                        type: "channel",
+                        common: {
+                            name: {
+                                en: "Maps",
+                                de: "Karten",
+                                ru: "Карты",
+                                pt: "Mapas",
+                                nl: "Kaarten",
+                                fr: "Cartes",
+                                it: "Mappe",
+                                es: "Mapas",
+                                pl: "Mapy",
+                                uk: "Карти",
+                                "zh-cn": "地图",
+                            },
+                        },
+                        native: {},
+                    });
+                }
+            }
             await this.delObjectAsync(`${sn}.list`, { recursive: true }).catch(() => {});
             await this.json2iob.parse(`${sn}.general`, d, {
                 channelName: "Allgemein",
