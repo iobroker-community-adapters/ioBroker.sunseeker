@@ -18,7 +18,7 @@ Connects Sunseeker robotic lawn mowers (also rebranded as Adano, Brücke, etc.) 
 ## Requirements
 
 - ioBroker js-controller `>= 6.0.11`
-- Admin `>= 7.0.23`
+- Admin `>= 7.8.23`
 - Node.js `>= 22`
 - Sunseeker cloud account (e-mail + password, same as in the mobile app)
 
@@ -60,15 +60,15 @@ For each mower (serial `<sn>`) the adapter creates these channels:
 - `<sn>.remote` — command buttons
 - `<sn>.schedule` — weekly plan (writable, see below)
 - `<sn>.map` — map data (only for S/X models, when available):
-  - `info` — raw response of `/wireless_map/wireless_device/get` (sizes, magnification, `mapModifyTime`, …)
-  - `image` — heatmap (PNG data URL; often empty if the cloud has not rendered one)
-  - `wifi` — WiFi signal heatmap (PNG data URL)
-  - `net` — 4G signal heatmap (PNG data URL)
-  - `texture` — raw texture map of the work area (WebP data URL)
-  - `mapData` — map geometry as raw JSON string (zones, polygons — same source HA uses to render its livemap)
-  - `pathData` — recorded mowing path as raw JSON string
-  - `backup` — backup map JSON (from `/wireless_map/backup_map/get`)
-  - `livemap` — adapter-rendered PNG data URL (zones, obstacles, recorded path, charger position; rendered with `pureimage`)
+    - `info` — raw response of `/wireless_map/wireless_device/get` (sizes, magnification, `mapModifyTime`, …)
+    - `image` — heatmap (PNG data URL; often empty if the cloud has not rendered one)
+    - `wifi` — WiFi signal heatmap (PNG data URL)
+    - `net` — 4G signal heatmap (PNG data URL)
+    - `texture` — raw texture map of the work area (WebP data URL)
+    - `mapData` — map geometry as raw JSON string (zones, polygons — same source HA uses to render its livemap)
+    - `pathData` — recorded mowing path as raw JSON string
+    - `backup` — backup map JSON (from `/wireless_map/backup_map/get`)
+    - `livemap` — adapter-rendered PNG data URL (zones, obstacles, recorded path, charger position; rendered with `pureimage`)
 
 Raw payloads (REST and MQTT) are written through `json2iob` directly — no parallel adapter-side data model is maintained.
 
@@ -90,12 +90,12 @@ Raw payloads (REST and MQTT) are written through `json2iob` directly — no para
 
 These settings are made writable directly under `<sn>.settings.*`. Writing them sends a `set_property` / `setProperty` (model-dependent) request to the cloud:
 
-| State                | Range                  | Unit | Notes                  |
-| -------------------- | ---------------------- | ---- | ---------------------- |
-| `bladeSpeed`         | 2800 – 3000 (step 100) | rpm  | New API only           |
-| `bladeHeight`        | 20 – 100 (step 5)      | mm   | New API only           |
-| `rainFlag`           | boolean                | —    | Old + New API          |
-| `rainDelayDuration`  | 0 – 720 (step 1)       | min  | Old + New API          |
+| State               | Range                  | Unit | Notes         |
+| ------------------- | ---------------------- | ---- | ------------- |
+| `bladeSpeed`        | 2800 – 3000 (step 100) | rpm  | New API only  |
+| `bladeHeight`       | 20 – 100 (step 5)      | mm   | New API only  |
+| `rainFlag`          | boolean                | —    | Old + New API |
+| `rainDelayDuration` | 0 – 720 (step 1)       | min  | Old + New API |
 
 When writing blade values, the adapter posts `{ id: "setDevBlade", key: "blade", method: "set_property", speed|height: <int> }`. After 1.5 s a status refresh is scheduled; MQTT push usually updates the values as well.
 
@@ -169,6 +169,7 @@ V1-specific (`app_wirelessv1_mower/wirelessv1/`): `device-setting`, `device-sett
 -->
 
 ### **WORK IN PROGRESS**
+
 - (ioBroker-Bot) Adapter requires admin >= 7.8.23 now.
 
 ### 0.0.1
@@ -180,7 +181,6 @@ V1-specific (`app_wirelessv1_mower/wirelessv1/`): `device-setting`, `device-sett
 ## License
 
 MIT License
-
 
 Copyright (c) 2026 iobroker-community-adapters <iobroker-community-adapters@gmx.de>  
 Copyright (c) 2026 TA2k <tombox2020@gmail.com>
