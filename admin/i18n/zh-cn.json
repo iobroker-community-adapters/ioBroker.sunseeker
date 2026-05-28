@@ -1,3 +1,9 @@
 {
+    "API": "应用程序编程接口",
+    "Language": "语言（已知语言：da、de、fr、fi、pl、en）",
+    "Password": "密码",
+    "Polling Interval (Seconds)": "轮询间隔（秒）",
+    "Region": "地区",
+    "Username / E-Mail": "用户名/电子邮件",
     "sunseeker adapter settings": "sunseeker的适配器设置"
 }

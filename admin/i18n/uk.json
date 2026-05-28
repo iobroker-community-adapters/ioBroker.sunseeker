@@ -1,3 +1,9 @@
 {
+    "API": "API",
+    "Language": "Мова (відомі мови: da, de, fr, fi, pl, en)",
+    "Password": "Пароль",
+    "Polling Interval (Seconds)": "Інтервал опитування (секунди)",
+    "Region": "Регіон",
+    "Username / E-Mail": "Ім'я користувача / E-Mail",
     "sunseeker adapter settings": "Налаштування адаптера для sunseeker"
 }

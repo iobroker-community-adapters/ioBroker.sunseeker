@@ -1,3 +1,9 @@
 {
+    "API": "API",
+    "Language": "Taal (Bekende talen: da, de, fr, fi, pl, en)",
+    "Password": "Wachtwoord",
+    "Polling Interval (Seconds)": "Polling-interval (seconden)",
+    "Region": "Regio",
+    "Username / E-Mail": "Gebruikersnaam / E-mailadres",
     "sunseeker adapter settings": "Adapterinstellingen voor sunseeker"
 }

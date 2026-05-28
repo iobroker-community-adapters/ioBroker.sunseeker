@@ -1,3 +1,9 @@
 {
+    "API": "API",
+    "Language": "Idioma (Idiomas conhecidos: da, de, fr, fi, pl, en)",
+    "Password": "Senha",
+    "Polling Interval (Seconds)": "Intervalo de pesquisa (segundos)",
+    "Region": "Região",
+    "Username / E-Mail": "Nome de usuário/e-mail",
     "sunseeker adapter settings": "Configurações do adaptador para sunseeker"
 }

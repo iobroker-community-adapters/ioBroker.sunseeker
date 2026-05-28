@@ -1,3 +1,9 @@
 {
-    "sunseeker adapter settings": "Adapter settings for sunseeker"
+    "sunseeker adapter settings": "Adapter settings for sunseeker",
+    "Username / E-Mail": "Username / E-Mail",
+    "Password": "Password",
+    "Region": "Region",
+    "API": "API",
+    "Polling Interval (Seconds)": "Polling Interval (Seconds)",
+    "Language": "Language (Known Languages: da, de, fr, fi, pl, en)"
 }
