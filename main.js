@@ -45,7 +45,7 @@ class SunseekerAdapter extends utils.Adapter {
 
         const cfg = this.config;
         if (!cfg.username || !cfg.password) {
-            this.log.error("Bitte Benutzername und Passwort in den Adapter-Einstellungen setzen");
+            this.log.error("Please set the username and password in the adapter settings.");
             return;
         }
 
@@ -87,7 +87,7 @@ class SunseekerAdapter extends utils.Adapter {
         try {
             await this.sunseeker.start();
         } catch (err) {
-            this.log.error(`Start fehlgeschlagen: ${err.message}`);
+            this.log.error(`Start failed: ${err.message}`);
             return;
         }
         this.setState("info.connection", true, true);
@@ -482,7 +482,7 @@ class SunseekerAdapter extends utils.Adapter {
                     );
                     this.setState(id, { val: false, ack: true });
                 } catch (err) {
-                    this.log.error(`Zeitplan für ${sn} fehlgeschlagen: ${err.message}`);
+                    this.log.error(`Schedule for ${sn} failed: ${err.message}`);
                 }
                 return;
             }
@@ -503,7 +503,7 @@ class SunseekerAdapter extends utils.Adapter {
                     );
                     this.setState(id, { val: state.val, ack: true });
                 } catch (err) {
-                    this.log.error(`Klingen-${key} für ${sn} fehlgeschlagen: ${err.message}`);
+                    this.log.error(`Blade-${key} for ${sn} failed: ${err.message}`);
                 }
                 return;
             }
@@ -522,7 +522,7 @@ class SunseekerAdapter extends utils.Adapter {
                     );
                     this.setState(id, { val: state.val, ack: true });
                 } catch (err) {
-                    this.log.error(`Regenverzögerung für ${sn} fehlgeschlagen: ${err.message}`);
+                    this.log.error(`Rain delay for ${sn} failed: ${err.message}`);
                 }
                 return;
             }
@@ -534,7 +534,7 @@ class SunseekerAdapter extends utils.Adapter {
         const sn = parts[remoteIdx - 1];
         const command = parts[remoteIdx + 1];
         if (!this.sunseeker.devicesRaw[sn]) {
-            this.log.warn(`onStateChange: Gerät ${sn} unbekannt`);
+            this.log.warn(`onStateChange: Device ${sn} unknown`);
             return;
         }
         try {
@@ -549,7 +549,7 @@ class SunseekerAdapter extends utils.Adapter {
             }
             this.setState(id, { val: state.val, ack: true });
         } catch (err) {
-            this.log.error(`Befehl ${command} für ${sn} fehlgeschlagen: ${err.message}`);
+            this.log.error(`Command ${command} for ${sn} failed: ${err.message}`);
         }
     }
 
