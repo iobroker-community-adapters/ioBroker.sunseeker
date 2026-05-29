@@ -1,9 +1,8 @@
-# Dependabot will run on day 2 of each month at 02:21 (Europe/Berlin timezone)
+# Dependabot will run on day 20 of each month at 03:26 (Europe/Berlin timezone)
 version: 2
 updates:
 
   - package-ecosystem: 'npm'
-    directory: '/'
     schedule:
       interval: 'cron'
       cronjob: '7 3 * * 3'
@@ -18,6 +17,8 @@ updates:
       - dependency-name: '@types/node'
         update-types:
           - 'version-update:semver-major'
+    directories:
+      - '**/*'
 
   - package-ecosystem: 'github-actions'
     directory: '/'
