@@ -71,6 +71,7 @@ declare class Sunseeker extends EventEmitter {
     classifyModel(modelName: string): "S" | "X" | "V" | "V1";
     mqttBroker(): { host: string; port: number };
     getDevices(): Promise<any[]>;
+    getEvents(sn: string, current: number, size: number): Promise<void>;
 
     // polling-and-settings.js
     startPolling(): void;

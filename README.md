@@ -7,7 +7,7 @@
 ![Number of Installations](https://iobroker.live/badges/sunseeker-installed.svg)
 ![Current version in stable repository](https://iobroker.live/badges/sunseeker-stable.svg)
 
-[![NPM](https://nodei.co/npm/iobroker.sunseeker.png?downloads=true)](https://nodei.co/npm/iobroker.sunseeker/)
+[![NPM](https://nodei.co/npm/iobroker.sunseeker.png?downloads=true)](https://www.npmjs.com/package/iobroker.sunseeker)
 
 **Tests:** ![Test and Release](https://github.com/iobroker-community-adapters/ioBroker.sunseeker/workflows/Test%20and%20Release/badge.svg)
 
@@ -59,6 +59,7 @@ For each mower (serial `<sn>`) the adapter creates these channels:
 - `<sn>.settings` — device settings
 - `<sn>.remote` — command buttons
 - `<sn>.schedule` — weekly plan (writable, see below)
+- `<sn>.events` — Mowing event log as json and manuel update button
 - `<sn>.map` — map data (only for S/X models, when available):
     - `info` — raw response of `/wireless_map/wireless_device/get` (sizes, magnification, `mapModifyTime`, …)
     - `image` — heatmap (PNG data URL; often empty if the cloud has not rendered one)
@@ -171,6 +172,7 @@ V1-specific (`app_wirelessv1_mower/wirelessv1/`): `device-setting`, `device-sett
 ### **WORK IN PROGRESS**
 
 - (ioBroker-Bot) Adapter requires admin >= 7.8.23 now.
+- (Lucky-ESA) Added event log
 
 ### 0.0.1
 

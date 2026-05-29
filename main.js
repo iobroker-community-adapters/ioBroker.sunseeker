@@ -74,6 +74,7 @@ class SunseekerAdapter extends utils.Adapter {
         });
 
         this.sunseeker.on("devices", payload => this.onSunseekerDevices(payload));
+        this.sunseeker.on("records", payload => this.onSunseekerRecords(payload));
         this.sunseeker.on("status", payload => this.onSunseekerStatus(payload));
         this.sunseeker.on("mqtt", payload => this.onSunseekerMqtt(payload));
         this.sunseeker.on("map", payload => this.onSunseekerMap(payload));
@@ -223,6 +224,90 @@ class SunseekerAdapter extends utils.Adapter {
             await this.ensureRemoteButtons(sn);
             await this.ensureScheduleStates(sn);
         }
+    }
+
+    async onSunseekerRecords({ sn, records }) {
+        let path = `${sn}.events`;
+        if (!this.createObjectDone[path]) {
+            this.createObjectDone[path] = true;
+            await this.extendObject(path, {
+                type: "channel",
+                common: {
+                    name: {
+                        en: "Event log",
+                        de: "Ereignisprotokoll",
+                        ru: "Журнал событий",
+                        pt: "Registro de eventos",
+                        nl: "Gebeurtenislogboek",
+                        fr: "Journal des événements",
+                        it: "Registro eventi",
+                        es: "Registro de eventos",
+                        pl: "Dziennik zdarzeń",
+                        uk: "Журнал подій",
+                        "zh-cn": "事件日志",
+                    },
+                },
+                native: {},
+            });
+        }
+        path = `${sn}.events.eventUpdate`;
+        if (!this.createObjectDone[path]) {
+            this.createObjectDone[path] = true;
+            await this.extendObject(path, {
+                type: "state",
+                common: {
+                    name: {
+                        en: "Manuel update",
+                        de: "Manuelle Aktualisierung",
+                        ru: "Обновление руководства",
+                        pt: "Atualização do Manuel",
+                        nl: "Handmatige update",
+                        fr: "Mise à jour du manuel",
+                        it: "Aggiornamento manuale",
+                        es: "Actualización de manual",
+                        pl: "Aktualizacja instrukcji",
+                        uk: "Оновлення Мануеля",
+                        "zh-cn": "手动更新",
+                    },
+                    type: "boolean",
+                    role: "button",
+                    write: false,
+                    read: true,
+                    def: false,
+                },
+                native: {},
+            });
+        }
+        path = `${sn}.events.events`;
+        if (!this.createObjectDone[path]) {
+            this.createObjectDone[path] = true;
+            await this.extendObject(path, {
+                type: "state",
+                common: {
+                    name: {
+                        en: "Event log as JSON",
+                        de: "Ereignisprotokoll als JSON",
+                        ru: "Журнал событий в формате JSON",
+                        pt: "Registro de eventos em formato JSON",
+                        nl: "Gebeurtenislogboek als JSON",
+                        fr: "Journal des événements au format JSON",
+                        it: "Registro eventi in formato JSON",
+                        es: "Registro de eventos como JSON",
+                        pl: "Dziennik zdarzeń jako JSON",
+                        uk: "Журнал подій у форматі JSON",
+                        "zh-cn": "事件日志（JSON格式）",
+                    },
+                    type: "string",
+                    role: "json",
+                    write: false,
+                    read: true,
+                    def: JSON.stringify({}),
+                },
+                native: {},
+            });
+        }
+        await this.setState(path, { val: JSON.stringify(records), ack: true });
+        //ToDo Interval for update
     }
 
     async onSunseekerStatus({ sn, status, settings }) {
@@ -468,6 +553,12 @@ class SunseekerAdapter extends utils.Adapter {
             return;
         }
         const parts = id.split(".");
+        const eventsIdx = parts.indexOf("events");
+        if (parts[eventsIdx + 1] === "eventUpdate") {
+            await this.sunseeker.getEvents(parts[eventsIdx - 1], 1, 10);
+            this.setState(id, { val: false, ack: true });
+            return;
+        }
         const scheduleIdx = parts.indexOf("schedule");
         if (scheduleIdx > 0 && parts[scheduleIdx + 1]) {
             const sn = parts[scheduleIdx - 1];
@@ -1001,7 +1092,7 @@ class SunseekerAdapter extends utils.Adapter {
                 path = `${sn}.settings.bladeHeight`;
                 if (!this.createObjectDone[path]) {
                     this.createObjectDone[path] = true;
-                    await this.extendObject(`${sn}.settings.bladeHeight`, {
+                    await this.extendObject(path, {
                         type: "state",
                         common: {
                             name: {
@@ -1035,7 +1126,7 @@ class SunseekerAdapter extends utils.Adapter {
             path = `${sn}.settings.rainFlag`;
             if (!this.createObjectDone[path]) {
                 this.createObjectDone[path] = true;
-                await this.extendObject(`${sn}.settings.rainFlag`, {
+                await this.extendObject(path, {
                     type: "state",
                     common: {
                         name: {
@@ -1064,7 +1155,7 @@ class SunseekerAdapter extends utils.Adapter {
             path = `${sn}.settings.rainDelayDuration`;
             if (!this.createObjectDone[path]) {
                 this.createObjectDone[path] = true;
-                await this.extendObject(`${sn}.settings.rainDelayDuration`, {
+                await this.extendObject(path, {
                     type: "state",
                     common: {
                         name: {
