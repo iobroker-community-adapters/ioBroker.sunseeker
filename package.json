@@ -1,6 +1,6 @@
 {
   "name": "iobroker.sunseeker",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Sunseeker Mower Adapter",
   "author": "TA2k <tombox2020@gmail.com>",
   "contributors": [

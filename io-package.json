@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "sunseeker",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "news": {
+      "0.0.2": {
+        "en": "Adapter requires admin >= 7.8.23 now.\nAdded event log",
+        "de": "Adapter benötigt admin >= 7.8.23 jetzt.\nZusätzliches Ereignisprotokoll",
+        "ru": "Адаптер требует администратора >= 7.8.23.\nДобавлен журнал событий",
+        "pt": "Adaptador requer administrador >= 7.8.23 agora.\nRegisto de eventos adicionado",
+        "nl": "Voor adapter is admin < 7.8.23 nodig.\nActielogboek toegevoegd",
+        "fr": "Adaptateur nécessite admin >= 7.8.23 maintenant.\nAjout du journal des événements",
+        "it": "L'adattatore richiede ora admin >= 7.8.23.\nRegistro eventi aggiunto",
+        "es": "El adaptador requiere admin= 7.8.23 ahora.\nRegistro del evento",
+        "pl": "Adapter wymaga admin > = 7.8.23 teraz.\nDodano dziennik zdarzeń",
+        "uk": "Адаптер вимагає адміністратора >= 7.8.23 тепер.\nДодано журнал подій",
+        "zh-cn": "适配器需要管理员 \\ 7.8.23现在.\n添加事件日志"
+      },
       "0.0.1": {
         "en": "initial release",
         "de": "Erstveröffentlichung",
