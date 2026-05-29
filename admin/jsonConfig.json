@@ -71,7 +71,7 @@
         },
         "language": {
             "type": "select",
-            "label": "Language (Known Languages: da, de, fr, fi, pl, en)",
+            "label": "Language",
             "newLine": false,
             "xs": 12,
             "sm": 12,
