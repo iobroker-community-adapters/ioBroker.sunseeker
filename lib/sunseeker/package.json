@@ -12,7 +12,7 @@
         "mqtt": "^5.15.1"
     },
     "optionalDependencies": {
-        "pureimage": "^0.4.18"
+        "pureimage": "^0.4.20"
     },
     "license": "MIT"
 }
