@@ -97,7 +97,7 @@ class SunseekerAdapter extends utils.Adapter {
                 return;
             }
         }
-        if (this.restartLimit.restartCount > 10) {
+        if (this.restartLimit.restartCount > this.config.restartlimit) {
             this.log.warn(`The restart limit of ${this.config.restartlimit} per day has been reached.`);
             return;
         }
@@ -127,7 +127,6 @@ class SunseekerAdapter extends utils.Adapter {
         }
 
         await this.sessionCheck();
-        this.log.debug(`OLD SESSION: ${JSON.stringify(this.config.session)}`);
 
         await this.sessionCheckMqtt();
         if (typeof this.config.mqtt_pw === "string" && this.config.mqtt_pw.length > 10) {
@@ -383,7 +382,7 @@ class SunseekerAdapter extends utils.Adapter {
         }
         let common;
         for (const d of devices) {
-            const sn = d.deviceSn;
+            const sn = d.deviceSn.replace(/this.FORBIDDEN_CHARS/gu, "_");
             this.regionId[sn] = [];
             if (!this.regionsCounter[sn]) {
                 this.regionsCounter[sn] = {
@@ -1119,7 +1118,7 @@ class SunseekerAdapter extends utils.Adapter {
                         type: "boolean",
                         role: "button",
                         write: true,
-                        read: true,
+                        read: false,
                         def: false,
                     },
                     native: {},
@@ -3695,7 +3694,7 @@ class SunseekerAdapter extends utils.Adapter {
                         type: "boolean",
                         role: "button",
                         write: true,
-                        read: true,
+                        read: false,
                         def: false,
                     },
                     native: {},
@@ -3731,7 +3730,7 @@ class SunseekerAdapter extends utils.Adapter {
                         type: "boolean",
                         role: "button",
                         write: true,
-                        read: true,
+                        read: false,
                         def: false,
                     },
                     native: {},

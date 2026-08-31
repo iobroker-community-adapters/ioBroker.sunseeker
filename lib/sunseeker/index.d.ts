@@ -34,6 +34,7 @@ declare class Sunseeker extends EventEmitter {
     unloading: boolean;
     requestLimit: Record<string, string>;
     maxRequest: number;
+    errorlimit: number;
 
     start(): Promise<void>;
     stop(): void;

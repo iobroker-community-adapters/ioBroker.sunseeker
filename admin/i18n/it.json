@@ -1,7 +1,7 @@
 {
     "API": "API",
     "Language": "Lingua (Lingue conosciute: da, de, fr, fi, pl, en)",
-    "Password": "Password",
+    "Password": "Mot de passe",
     "Polling Interval (Seconds)": "Intervallo di polling (secondi)",
     "Region": "Regione",
     "Request limit": "Limite richieste HTTPS (500-10000)",
