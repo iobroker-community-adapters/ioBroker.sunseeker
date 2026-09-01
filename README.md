@@ -50,7 +50,13 @@ V1-specific (`app_wirelessv1_mower/wirelessv1/`): `device-setting`, `device-sett
 
 - Home Assistant integration used as the API reference: <https://github.com/Sdahl1234/Sunseeker-lawn-mower>
 - json2iob: <https://github.com/TA2k/json2iob>
-- Sunseeker: <https://sunseekertech.com>
+- Sunseeker (wireless): <https://sunseekertech.com>
+- Scheppach (wire): <https://shop.scheppach.com/Produkte/Garten-Hof/Rasenmaeher/Rasenmaehroboter/>
+- Texas (wire): <https://texas-gartentechnik.eu/Sortiment/Maehroboter/>
+- Adano (wire): <https://schou.com/en/pages/robotplaeneklippere>
+- Brücke (wire): No HP
+- Orbex (wire): No HP
+- Grouw (wire): <https://schou.com/en/pages/robotplaeneklippere>
 
 ## Description
 
