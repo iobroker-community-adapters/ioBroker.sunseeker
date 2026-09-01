@@ -56,8 +56,15 @@
             "uk": "Адаптер косарки Sunseeker",
             "zh-cn": "Sunseeker 割草机适配器"
         },
-        "authors": ["TA2k <tombox2020@gmail.com>", "iobroker-community-adapters <iobroker-community-adapters@gmx.de>"],
-        "keywords": ["sunseeker", "adano", "brücke"],
+        "authors": [
+            "TA2k <tombox2020@gmail.com>",
+            "iobroker-community-adapters <iobroker-community-adapters@gmx.de>"
+        ],
+        "keywords": [
+            "sunseeker",
+            "adano",
+            "brücke"
+        ],
         "licenseInformation": {
             "type": "free",
             "license": "MIT"
@@ -114,8 +121,12 @@
             "request": []
         }
     },
-    "encryptedNative": ["password"],
-    "protectedNative": ["password"],
+    "encryptedNative": [
+        "password"
+    ],
+    "protectedNative": [
+        "password"
+    ],
     "objects": [],
     "instanceObjects": [
         {
