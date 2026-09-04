@@ -1957,6 +1957,10 @@ class SunseekerAdapter extends utils.Adapter {
                                 ack: true,
                             });
                         }
+                        await this.setState(`${sn}.remote.startZones`, {
+                            val: JSON.stringify(this.regionId[sn]),
+                            ack: true,
+                        });
                     }
                     await this.json2iob.parse(`${sn}.map.zones`, map_info.region_work, {
                         channelName: {
@@ -2650,30 +2654,11 @@ class SunseekerAdapter extends utils.Adapter {
                 return;
             }
             if (leaf === "bladeSpeed" || leaf === "bladeHeight") {
-                const key = leaf === "bladeSpeed" ? "speed" : "height";
-                try {
-                    await this.sunseeker.setBlade(sn, key, Number(state.val));
-                    this.updateDeviceAfterStateChange(sn);
-                    this.setState(id, { val: state.val, ack: true });
-                } catch (err) {
-                    this.log.error(`Blade-${key} for ${sn} failed: ${err.message}`);
-                }
+                this.sendBlade(id, sn, leaf, state);
                 return;
             }
             if (leaf === "rainFlag" || leaf === "rainDelayDuration") {
-                try {
-                    const flagVal =
-                        leaf === "rainFlag" ? state.val : (await this.getStateAsync(`${sn}.settings.rainFlag`))?.val;
-                    const durVal =
-                        leaf === "rainDelayDuration"
-                            ? state.val
-                            : (await this.getStateAsync(`${sn}.settings.rainDelayDuration`))?.val;
-                    await this.sunseeker.setRain(sn, Boolean(flagVal), Math.round(Number(durVal) || 0));
-                    this.updateDeviceAfterStateChange(sn);
-                    this.setState(id, { val: state.val, ack: true });
-                } catch (err) {
-                    this.log.error(`Rain delay for ${sn} failed: ${err.message}`);
-                }
+                this.sendRainFlag(id, sn, leaf, state);
                 return;
             }
         }
@@ -2683,8 +2668,67 @@ class SunseekerAdapter extends utils.Adapter {
         }
         const sn = parts[remoteIdx - 1];
         const command = parts[remoteIdx + 1];
+
         if (!this.sunseeker.devicesRaw[sn]) {
             this.log.warn(`onStateChange: Device ${sn} unknown`);
+            return;
+        }
+        this.sendRemoteCommand(id, sn, command, state);
+    }
+
+    /**
+     * @param {string} id
+     * @param {string} sn
+     * @param {string} command
+     * @param {ioBroker.State} state
+     */
+    async sendBlade(id, sn, command, state) {
+        if (!this.sunseeker) {
+            return;
+        }
+        const key = command === "bladeSpeed" ? "speed" : "height";
+        try {
+            await this.sunseeker.setBlade(sn, key, Number(state.val));
+            this.updateDeviceAfterStateChange(sn);
+            this.setState(id, { val: state.val, ack: true });
+        } catch (err) {
+            this.log.error(`Blade-${key} for ${sn} failed: ${err.message}`);
+        }
+    }
+
+    /**
+     * @param {string} id
+     * @param {string} sn
+     * @param {string} command
+     * @param {ioBroker.State} state
+     */
+    async sendRainFlag(id, sn, command, state) {
+        if (!this.sunseeker) {
+            return;
+        }
+        try {
+            const flagVal =
+                command === "rainFlag" ? state.val : (await this.getStateAsync(`${sn}.settings.rainFlag`))?.val;
+            const durVal =
+                command === "rainDelayDuration"
+                    ? state.val
+                    : (await this.getStateAsync(`${sn}.settings.rainDelayDuration`))?.val;
+            await this.sunseeker.setRain(sn, Boolean(flagVal), Math.round(Number(durVal) || 0));
+            this.updateDeviceAfterStateChange(sn);
+            this.setState(id, { val: state.val, ack: true });
+        } catch (err) {
+            this.log.error(`Rain delay for ${sn} failed: ${err.message}`);
+        }
+    }
+
+    /**
+     * @param {string} id
+     * @param {string} sn
+     * @param {string} command
+     * @param {ioBroker.State} state
+     */
+    async sendRemoteCommand(id, sn, command, state) {
+        if (!this.sunseeker) {
             return;
         }
         try {
@@ -2700,11 +2744,16 @@ class SunseekerAdapter extends utils.Adapter {
                 await this.sunseeker.sendCommand(sn, command, state.val);
             } else if (command === "set_border_distance") {
                 await this.sunseeker.sendCommand(sn, command, state.val);
+            } else if (command === "startZones") {
+                if (typeof state.val === "string" && state.val.startsWith("[")) {
+                    const mapids = JSON.parse(state.val);
+                    await this.sunseeker.sendCommand(sn, "start", mapids);
+                }
             } else {
                 await this.sunseeker.sendCommand(sn, command, state.val);
                 this.updateDeviceAfterStateChange(sn);
             }
-            this.setState(id, { val: state.val, ack: true });
+            await this.setState(id, { val: state.val, ack: true });
         } catch (err) {
             this.log.error(`Command ${command} for ${sn} failed: ${err.message}`);
         }
