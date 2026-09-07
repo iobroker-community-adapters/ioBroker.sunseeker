@@ -70,11 +70,13 @@ declare class Sunseeker extends EventEmitter {
     setScheduleMode(sn: string, mode: number): void;
     readLivemapSettings(sn: string): Promise<void>;
     setLiveSettings(sn: string, value: ioBroker.State | null | undefined, attribut: string): void;
+    changeAttributeName(data: any): void;
+    getUpdateDevices(): Promise<void>;
 
     // polling-and-settings.js
     startPolling(): void;
     stopPolling(): void;
-    updateAllDevices(): Promise<void>;
+    updateAllDevices(first: boolean): Promise<void>;
     updateDevice(sn: string): Promise<void>;
     sendCommand(sn: string, command: string, value?: any): Promise<void>;
     setBlade(sn: string, key: "speed" | "height", value: number): Promise<void>;

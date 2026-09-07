@@ -155,6 +155,7 @@ class SunseekerAdapter extends utils.Adapter {
         }
 
         this.sunseeker.on("devices", payload => this.onSunseekerDevices(payload));
+        this.sunseeker.on("updateDevices", payload => this.onSunseekerUpdateDevices(payload));
         this.sunseeker.on("records", payload => this.onSunseekerRecords(payload));
         this.sunseeker.on("status", payload => this.onSunseekerStatus(payload));
         this.sunseeker.on("zigzag", payload => this.onSunseekerMultiZigZag(payload));
@@ -184,7 +185,7 @@ class SunseekerAdapter extends utils.Adapter {
         this.setState("info.connection", true, true);
 
         try {
-            await this.sunseeker.updateAllDevices();
+            await this.sunseeker.updateAllDevices(false);
         } catch (err) {
             this.log.warn(`Initial-Update: ${err.message}`);
         }
@@ -364,7 +365,7 @@ class SunseekerAdapter extends utils.Adapter {
         return {
             event_code: { ...events },
             errortype: { ...ERRORTYPE_LABELS },
-            faultStatusCode: { ...ERRORTYPE_LABELS },
+            fault: { ...ERRORTYPE_LABELS },
             status: states,
         };
     }
@@ -374,6 +375,46 @@ class SunseekerAdapter extends utils.Adapter {
      */
     onSunseekerObjectExists(path) {
         this.createObjectDone[path] = true;
+    }
+
+    async onSunseekerUpdateDevices({ devices }) {
+        if (!Array.isArray(devices)) {
+            return;
+        }
+        for (const d of devices) {
+            const sn = d.deviceSn.replace(/this.FORBIDDEN_CHARS/gu, "_");
+            const path = `${sn}.mower_raw`;
+            const cleanup = this.removeNull(d);
+            if (cleanup.multi_zigzag_angles) {
+                delete cleanup.multi_zigzag_angles;
+            }
+            if (cleanup.plan_angle) {
+                delete cleanup.plan_angle;
+            }
+            if (cleanup.area_info) {
+                delete cleanup.area_info;
+            }
+            await this.json2iob.parse(path, cleanup, {
+                channelName: {
+                    en: "All data from cloud and mqtt",
+                    de: "Alle Daten aus der Cloud und MQTT",
+                    ru: "Все данные поступают из облака и MQTT.",
+                    pt: "Todos os dados da nuvem e do MQTT",
+                    nl: "Alle gegevens zijn afkomstig uit de cloud en via MQTT.",
+                    fr: "Toutes les données proviennent du cloud et de MQTT.",
+                    it: "Tutti i dati dal cloud e MQTT",
+                    es: "Todos los datos provienen de la nube y MQTT.",
+                    pl: "Wszystkie dane z chmury i MQTT",
+                    uk: "Всі дані з хмари та mqtt",
+                    "zh-cn": "所有数据均来自云端和 MQTT",
+                },
+                forceIndex: true,
+                roles: {
+                    picUrl: "text.url",
+                    picUrlDetail: "text.url",
+                },
+            });
+        }
     }
 
     async onSunseekerDevices({ devices }) {
@@ -397,10 +438,10 @@ class SunseekerAdapter extends utils.Adapter {
             let path = "";
             if (this.sunseeker) {
                 common = {
-                    name: d.deviceName || sn,
+                    name: d.dev_name || sn,
                     icon: d["picUrlData"] != null ? d["picUrlData"] : "img/mower.png",
                     statusStates: {
-                        onlineId: `${this.namespace}.${sn}.mower_raw.onlineFlag`,
+                        onlineId: `${this.namespace}.${sn}.mower_raw.online`,
                     },
                 };
                 await this.sunseeker.createDataPoint(`${this.namespace}.${sn}`, common, "device", null, true, null);
@@ -531,7 +572,16 @@ class SunseekerAdapter extends utils.Adapter {
             }
             path = `${sn}.mower_raw`;
             const cleanup = this.removeNull(d);
-            await this.json2iob.parse(`${sn}.mower_raw`, cleanup, {
+            if (cleanup.multi_zigzag_angles) {
+                delete cleanup.multi_zigzag_angles;
+            }
+            if (cleanup.plan_angle) {
+                delete cleanup.plan_angle;
+            }
+            if (cleanup.area_info) {
+                delete cleanup.area_info;
+            }
+            await this.json2iob.parse(path, cleanup, {
                 channelName: {
                     en: "All data from cloud and mqtt",
                     de: "Alle Daten aus der Cloud und MQTT",
@@ -873,7 +923,7 @@ class SunseekerAdapter extends utils.Adapter {
             return;
         }
         //ToDo Add custom zigzag per zone
-        this.log.debug(`${sn} - ${JSON.stringify(data)}`);
+        this.log.debug(`onSunseekerCustomMultiZigZag: ${sn} - ${JSON.stringify(data)}`);
         const meta = this.sunseeker.deviceMeta[sn];
         this.log.debug(`Region: ${JSON.stringify(meta.custom_multi_sort)}`);
         const count_sort = Object.keys(meta.custom_multi_sort).length;
@@ -1209,6 +1259,15 @@ class SunseekerAdapter extends utils.Adapter {
         if (status) {
             const cleanup = this.removeNull(status);
             await this.setSettings(sn, cleanup);
+            if (cleanup.multi_zigzag_angles) {
+                delete cleanup.multi_zigzag_angles;
+            }
+            if (cleanup.plan_angle) {
+                delete cleanup.plan_angle;
+            }
+            if (cleanup.area_info) {
+                delete cleanup.area_info;
+            }
             await this.json2iob.parse(`${sn}.mower_raw`, cleanup, {
                 channelName: {
                     en: "All data from cloud and mqtt",
@@ -1394,11 +1453,16 @@ class SunseekerAdapter extends utils.Adapter {
         if (id == "setDivideArea") {
             const data_area = {
                 area_info: {
-                    map_id: data.area_info[0].map_id,
-                    vertexs: data.area_info[0].vertexs,
+                    vertexs: JSON.stringify(data.area_info),
                 },
             };
             this.setMowerRaw(sn, data_area);
+            return;
+        }
+        if (id == "relo_status") {
+            data["relo_status"] = data.status;
+            delete data.status;
+            this.setMowerRaw(sn, data);
             return;
         }
         if (id == "report_notice") {
@@ -3490,14 +3554,8 @@ class SunseekerAdapter extends utils.Adapter {
      * @param {any} obj
      */
     removeNull(obj) {
-        if (typeof obj.firmwareVersion === "number") {
-            delete obj.firmwareVersion;
-        }
         if (typeof obj.rainDelayDuration === "string") {
             obj.rainDelayDuration = parseInt(obj.rainDelayDuration);
-        }
-        if (typeof obj.workStatusCode === "number") {
-            obj.workStatusCode = obj.workStatusCode.toString();
         }
         return JSON.parse(JSON.stringify(obj), (key, value) => {
             if (value === null) {
