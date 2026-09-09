@@ -81,6 +81,7 @@ V1-specific (`app_wirelessv1_mower/wirelessv1/`): `device-setting`, `device-sett
 - (Lucky-ESA) Multi-angle added
 - (Lucky-ESA) Custom Multi-angle added
 - (Lucky-ESA) Mirroring of App version 1.7.0 regarding login, header, and MQTT password.
+- (Lucky-ESA) Pattern added
 
 ### 0.0.2 (2026-05-29)
 
