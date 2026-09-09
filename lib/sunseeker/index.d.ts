@@ -72,6 +72,7 @@ declare class Sunseeker extends EventEmitter {
     setLiveSettings(sn: string, value: ioBroker.State | null | undefined, attribut: string): void;
     changeAttributeName(data: any): void;
     getUpdateDevices(): Promise<void>;
+    hexToRGBA(hex: string | boolean | number): void;
 
     // polling-and-settings.js
     startPolling(): void;

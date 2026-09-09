@@ -106,7 +106,7 @@
         "region": "EU",
         "apptype": "New",
         "interval": 300,
-        "ratelimit": 3000,
+        "ratelimit": 6000,
         "restartlimit": 10,
         "errorlimit": 10,
         "language": "de-DE",

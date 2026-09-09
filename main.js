@@ -388,7 +388,7 @@ class SunseekerAdapter extends utils.Adapter {
             return;
         }
         for (const d of devices) {
-            const sn = d.deviceSn.replace(/this.FORBIDDEN_CHARS/gu, "_");
+            const sn = d.deviceSn.replace(this.FORBIDDEN_CHARS, "_");
             const path = `${sn}.mower_raw`;
             const cleanup = this.removeNull(d);
             if (cleanup.multi_zigzag_angles) {
@@ -429,7 +429,7 @@ class SunseekerAdapter extends utils.Adapter {
         }
         let common;
         for (const d of devices) {
-            const sn = d.deviceSn.replace(/this.FORBIDDEN_CHARS/gu, "_");
+            const sn = d.deviceSn.replace(this.FORBIDDEN_CHARS, "_");
             this.patternTimeout[sn] = null;
             this.regionId[sn] = [];
             if (!this.regionsCounter[sn]) {
@@ -1159,7 +1159,7 @@ class SunseekerAdapter extends utils.Adapter {
                     common: {
                         name: {
                             en: "New Multi-Angle (enable/disable)",
-                            de: "Neuer Multi-Angle (aktivieren/deaktivieren)",
+                            de: "Neuer Multi-Winkel (aktivieren/deaktivieren)",
                             ru: "Новая функция многоугольной съемки (включить/выключить)",
                             pt: "Novo Multi-Ângulo (ativar/desativar)",
                             nl: "Nieuwe multi-hoekmodus (inschakelen/uitschakelen)",
@@ -1184,16 +1184,16 @@ class SunseekerAdapter extends utils.Adapter {
                     type: "state",
                     common: {
                         name: {
-                            en: "Create new Multi-Angle",
-                            de: "Neue Multi-Angle-Funktion erstellen",
-                            ru: "Создать новый многоракурсный режим",
+                            en: "Create new multi-angle",
+                            de: "Neue Mehrwinkel-Optionen erstellen",
+                            ru: "Создайте новый многоракурсный режим",
                             pt: "Criar novo ângulo múltiplo",
-                            nl: "Maak een nieuwe multi-angle aan",
-                            fr: "Créer un nouveau multi-angle",
-                            it: "Crea nuovo Multi-angolo",
+                            nl: "Maak een nieuwe multi-angle",
+                            fr: "Créer un nouvel angle multiple",
+                            it: "Crea nuova multi-angolo",
                             es: "Crear nuevo ángulo múltiple",
-                            pl: "Utwórz nowy Multi-Angle",
-                            uk: "Створити новий багатокутний об'єкт",
+                            pl: "Utwórz nowy kąt wielokątny",
+                            uk: "Створити новий багатокутний",
                             "zh-cn": "创建新的多角度",
                         },
                         type: "boolean",
@@ -1697,7 +1697,7 @@ class SunseekerAdapter extends utils.Adapter {
                     "zh-cn": `地图-${kind}（数据 URL)`,
                 },
                 type: "string",
-                role: "state",
+                role: "text",
                 read: true,
                 write: false,
             };
@@ -1773,7 +1773,7 @@ class SunseekerAdapter extends utils.Adapter {
                     "zh-cn": "实时地图（渲染后的PNG数据URL）",
                 },
                 type: "string",
-                role: "state",
+                role: "text",
                 read: true,
                 write: false,
             };
@@ -3273,7 +3273,7 @@ class SunseekerAdapter extends utils.Adapter {
                 await this.sunseeker.updateDevice(sn);
             } else if (command === "refresh_property") {
                 await this.sunseeker.fetchInitialProperties();
-            } else if (command === "set_screen_durration") {
+            } else if (command === "set_screen_duration") {
                 await this.sunseeker.sendCommand(sn, command, state.val);
             } else if (command === "set_return_path") {
                 await this.sunseeker.sendCommand(sn, command, state.val);
@@ -3576,9 +3576,9 @@ class SunseekerAdapter extends utils.Adapter {
                     }
                     let zigzag = [];
                     let count = 1;
-                    for (const zigzag of json.multi_zigzag_angles) {
+                    for (const zag of json.multi_zigzag_angles) {
                         if (state != `0${count}`) {
-                            zigzag.push(zigzag);
+                            zigzag.push(zag);
                         }
                     }
                     if (zigzag.length == 0) {
@@ -3586,6 +3586,7 @@ class SunseekerAdapter extends utils.Adapter {
                         json.plan_mode = 0;
                     } else {
                         json.plan_mode = 4;
+                        json.multi_zigzag_angles = zigzag;
                     }
                     this.sunseeker.setSettings(sn, json, "setCustom", "custom", null);
                     this.setState(id, { val: false, ack: true });
