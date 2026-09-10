@@ -2445,7 +2445,7 @@ class SunseekerAdapter extends utils.Adapter {
                         }
                     }
                     if (patterns > pattern) {
-                        let count = pattern;
+                        let count = patterns;
                         let save = 0;
                         for (let a = pattern; a <= patterns - 1; a++) {
                             this.log.info(`Delete pattern: ${this.namespace}.${sn}.map.pattern.0${count}`);
