@@ -43,6 +43,7 @@ class SunseekerAdapter extends utils.Adapter {
         this.regionsCounter = {};
         this.regionId = {};
         this.notice = {};
+        this.patternTimeout = {};
         this.restartLimit = {
             restartCount: 0,
             restartLast: 0,
@@ -97,7 +98,7 @@ class SunseekerAdapter extends utils.Adapter {
                 return;
             }
         }
-        if (this.restartLimit.restartCount > 10) {
+        if (this.restartLimit.restartCount > this.config.restartlimit) {
             this.log.warn(`The restart limit of ${this.config.restartlimit} per day has been reached.`);
             return;
         }
@@ -127,7 +128,6 @@ class SunseekerAdapter extends utils.Adapter {
         }
 
         await this.sessionCheck();
-        this.log.debug(`OLD SESSION: ${JSON.stringify(this.config.session)}`);
 
         await this.sessionCheckMqtt();
         if (typeof this.config.mqtt_pw === "string" && this.config.mqtt_pw.length > 10) {
@@ -156,6 +156,7 @@ class SunseekerAdapter extends utils.Adapter {
         }
 
         this.sunseeker.on("devices", payload => this.onSunseekerDevices(payload));
+        this.sunseeker.on("updateDevices", payload => this.onSunseekerUpdateDevices(payload));
         this.sunseeker.on("records", payload => this.onSunseekerRecords(payload));
         this.sunseeker.on("status", payload => this.onSunseekerStatus(payload));
         this.sunseeker.on("zigzag", payload => this.onSunseekerMultiZigZag(payload));
@@ -185,7 +186,7 @@ class SunseekerAdapter extends utils.Adapter {
         this.setState("info.connection", true, true);
 
         try {
-            await this.sunseeker.updateAllDevices();
+            await this.sunseeker.updateAllDevices(false);
         } catch (err) {
             this.log.warn(`Initial-Update: ${err.message}`);
         }
@@ -320,6 +321,11 @@ class SunseekerAdapter extends utils.Adapter {
             this.firstStartTimeout && this.clearTimeout(this.firstStartTimeout);
             this.updateDeviceSet && this.clearTimeout(this.updateDeviceSet);
             this.updateDeviceStateChange && this.clearTimeout(this.updateDeviceStateChange);
+            for (const sn in this.patternTimeout) {
+                if (this.patternTimeout[sn]) {
+                    this.clearTimeout(this.patternTimeout[sn]);
+                }
+            }
             this.setState("info.connection", false, true);
             callback();
         } catch (error) {
@@ -365,7 +371,7 @@ class SunseekerAdapter extends utils.Adapter {
         return {
             event_code: { ...events },
             errortype: { ...ERRORTYPE_LABELS },
-            faultStatusCode: { ...ERRORTYPE_LABELS },
+            fault: { ...ERRORTYPE_LABELS },
             status: states,
         };
     }
@@ -377,13 +383,54 @@ class SunseekerAdapter extends utils.Adapter {
         this.createObjectDone[path] = true;
     }
 
+    async onSunseekerUpdateDevices({ devices }) {
+        if (!Array.isArray(devices)) {
+            return;
+        }
+        for (const d of devices) {
+            const sn = d.deviceSn.replace(this.FORBIDDEN_CHARS, "_");
+            const path = `${sn}.mower_raw`;
+            const cleanup = this.removeNull(d);
+            if (cleanup.multi_zigzag_angles) {
+                delete cleanup.multi_zigzag_angles;
+            }
+            if (cleanup.plan_angle) {
+                delete cleanup.plan_angle;
+            }
+            if (cleanup.area_info) {
+                delete cleanup.area_info;
+            }
+            await this.json2iob.parse(path, cleanup, {
+                channelName: {
+                    en: "All data from cloud and mqtt",
+                    de: "Alle Daten aus der Cloud und MQTT",
+                    ru: "Все данные поступают из облака и MQTT.",
+                    pt: "Todos os dados da nuvem e do MQTT",
+                    nl: "Alle gegevens zijn afkomstig uit de cloud en via MQTT.",
+                    fr: "Toutes les données proviennent du cloud et de MQTT.",
+                    it: "Tutti i dati dal cloud e MQTT",
+                    es: "Todos los datos provienen de la nube y MQTT.",
+                    pl: "Wszystkie dane z chmury i MQTT",
+                    uk: "Всі дані з хмари та mqtt",
+                    "zh-cn": "所有数据均来自云端和 MQTT",
+                },
+                forceIndex: true,
+                roles: {
+                    picUrl: "text.url",
+                    picUrlDetail: "text.url",
+                },
+            });
+        }
+    }
+
     async onSunseekerDevices({ devices }) {
         if (!Array.isArray(devices)) {
             return;
         }
         let common;
         for (const d of devices) {
-            const sn = d.deviceSn;
+            const sn = d.deviceSn.replace(this.FORBIDDEN_CHARS, "_");
+            this.patternTimeout[sn] = null;
             this.regionId[sn] = [];
             if (!this.regionsCounter[sn]) {
                 this.regionsCounter[sn] = {
@@ -398,10 +445,10 @@ class SunseekerAdapter extends utils.Adapter {
             let path = "";
             if (this.sunseeker) {
                 common = {
-                    name: d.deviceName || sn,
+                    name: d.dev_name || sn,
                     icon: d["picUrlData"] != null ? d["picUrlData"] : "img/mower.png",
                     statusStates: {
-                        onlineId: `${this.namespace}.${sn}.mower_raw.onlineFlag`,
+                        onlineId: `${this.namespace}.${sn}.mower_raw.online`,
                     },
                 };
                 await this.sunseeker.createDataPoint(`${this.namespace}.${sn}`, common, "device", null, true, null);
@@ -457,6 +504,30 @@ class SunseekerAdapter extends utils.Adapter {
                         };
                         await this.sunseeker.createDataPoint(
                             `${this.namespace}.${path}.zones`,
+                            common,
+                            "channel",
+                            null,
+                            null,
+                            null,
+                        );
+                        common = {
+                            name: {
+                                en: "Pattern",
+                                de: "Muster",
+                                ru: "Шаблон",
+                                pt: "Padrão",
+                                nl: "Patroon",
+                                fr: "Modèle",
+                                it: "Modello",
+                                es: "Patrón",
+                                pl: "Wzór",
+                                uk: "Візерунок",
+                                "zh-cn": "图案",
+                            },
+                            icon: "img/pattern.png",
+                        };
+                        await this.sunseeker.createDataPoint(
+                            `${this.namespace}.${path}.pattern`,
                             common,
                             "channel",
                             null,
@@ -532,7 +603,16 @@ class SunseekerAdapter extends utils.Adapter {
             }
             path = `${sn}.mower_raw`;
             const cleanup = this.removeNull(d);
-            await this.json2iob.parse(`${sn}.mower_raw`, cleanup, {
+            if (cleanup.multi_zigzag_angles) {
+                delete cleanup.multi_zigzag_angles;
+            }
+            if (cleanup.plan_angle) {
+                delete cleanup.plan_angle;
+            }
+            if (cleanup.area_info) {
+                delete cleanup.area_info;
+            }
+            await this.json2iob.parse(path, cleanup, {
                 channelName: {
                     en: "All data from cloud and mqtt",
                     de: "Alle Daten aus der Cloud und MQTT",
@@ -874,7 +954,7 @@ class SunseekerAdapter extends utils.Adapter {
             return;
         }
         //ToDo Add custom zigzag per zone
-        this.log.debug(`${sn} - ${JSON.stringify(data)}`);
+        this.log.debug(`onSunseekerCustomMultiZigZag: ${sn} - ${JSON.stringify(data)}`);
         const meta = this.sunseeker.deviceMeta[sn];
         this.log.debug(`Region: ${JSON.stringify(meta.custom_multi_sort)}`);
         const count_sort = Object.keys(meta.custom_multi_sort).length;
@@ -907,7 +987,7 @@ class SunseekerAdapter extends utils.Adapter {
                         await this.onSunseekerMultiZigZag({ sn, data, path_multi: `map.zones.${channel}.custom` });
                     }
                 } else {
-                    this.log.warn(`Cannot found id ${custom.id} - ${JSON.stringify(custom)}`);
+                    this.log.warn(`Cannot found id ${custom.region_id} - ${JSON.stringify(custom)}`);
                 }
             }
         }
@@ -1079,7 +1159,7 @@ class SunseekerAdapter extends utils.Adapter {
                     common: {
                         name: {
                             en: "New Multi-Angle (enable/disable)",
-                            de: "Neuer Multi-Angle (aktivieren/deaktivieren)",
+                            de: "Neuer Multi-Winkel (aktivieren/deaktivieren)",
                             ru: "Новая функция многоугольной съемки (включить/выключить)",
                             pt: "Novo Multi-Ângulo (ativar/desativar)",
                             nl: "Nieuwe multi-hoekmodus (inschakelen/uitschakelen)",
@@ -1104,22 +1184,22 @@ class SunseekerAdapter extends utils.Adapter {
                     type: "state",
                     common: {
                         name: {
-                            en: "Create new Multi-Angle",
-                            de: "Neue Multi-Angle-Funktion erstellen",
-                            ru: "Создать новый многоракурсный режим",
+                            en: "Create new multi-angle",
+                            de: "Neue Mehrwinkel-Optionen erstellen",
+                            ru: "Создайте новый многоракурсный режим",
                             pt: "Criar novo ângulo múltiplo",
-                            nl: "Maak een nieuwe multi-angle aan",
-                            fr: "Créer un nouveau multi-angle",
-                            it: "Crea nuovo Multi-angolo",
+                            nl: "Maak een nieuwe multi-angle",
+                            fr: "Créer un nouvel angle multiple",
+                            it: "Crea nuova multi-angolo",
                             es: "Crear nuevo ángulo múltiple",
-                            pl: "Utwórz nowy Multi-Angle",
-                            uk: "Створити новий багатокутний об'єкт",
+                            pl: "Utwórz nowy kąt wielokątny",
+                            uk: "Створити новий багатокутний",
                             "zh-cn": "创建新的多角度",
                         },
                         type: "boolean",
                         role: "button",
                         write: true,
-                        read: true,
+                        read: false,
                         def: false,
                     },
                     native: {},
@@ -1210,6 +1290,15 @@ class SunseekerAdapter extends utils.Adapter {
         if (status) {
             const cleanup = this.removeNull(status);
             await this.setSettings(sn, cleanup);
+            if (cleanup.multi_zigzag_angles) {
+                delete cleanup.multi_zigzag_angles;
+            }
+            if (cleanup.plan_angle) {
+                delete cleanup.plan_angle;
+            }
+            if (cleanup.area_info) {
+                delete cleanup.area_info;
+            }
             await this.json2iob.parse(`${sn}.mower_raw`, cleanup, {
                 channelName: {
                     en: "All data from cloud and mqtt",
@@ -1366,6 +1455,14 @@ class SunseekerAdapter extends utils.Adapter {
             this.setMowerRaw(sn, data);
             return;
         }
+        if (id == "setCustomizeArea") {
+            //ToDo If a pattern is created without a response, the pattern is not displayed but is still traced!!!
+            if (this.patternTimeout[sn]) {
+                this.clearTimeout(this.patternTimeout[sn]);
+                this.patternTimeout[sn] = null;
+            }
+            return;
+        }
         if (data.custom) {
             this.onSunseekerCustomMultiZigZag({ sn, data });
             return;
@@ -1389,17 +1486,27 @@ class SunseekerAdapter extends utils.Adapter {
         if (data.file && typeof data.event_code === "number") {
             const data_file = {};
             data_file[`file_${data.event_code}`] = data;
+            if (data.event_code == 7 && this.sunseeker) {
+                this.sunseeker
+                    .fetchMap(sn)
+                    .catch((/** @type {{ message: any; }} */ err) => this.log.debug(`Mqtt Map ${sn}: ${err.message}`));
+            }
             this.setMowerRaw(sn, data_file);
             return;
         }
         if (id == "setDivideArea") {
             const data_area = {
                 area_info: {
-                    map_id: data.area_info[0].map_id,
-                    vertexs: data.area_info[0].vertexs,
+                    vertexs: JSON.stringify(data.area_info),
                 },
             };
             this.setMowerRaw(sn, data_area);
+            return;
+        }
+        if (id == "relo_status") {
+            data["relo_status"] = data.status;
+            delete data.status;
+            this.setMowerRaw(sn, data);
             return;
         }
         if (id == "report_notice") {
@@ -1590,7 +1697,7 @@ class SunseekerAdapter extends utils.Adapter {
                     "zh-cn": `地图-${kind}（数据 URL)`,
                 },
                 type: "string",
-                role: "state",
+                role: "text",
                 read: true,
                 write: false,
             };
@@ -1666,7 +1773,7 @@ class SunseekerAdapter extends utils.Adapter {
                     "zh-cn": "实时地图（渲染后的PNG数据URL）",
                 },
                 type: "string",
-                role: "state",
+                role: "text",
                 read: true,
                 write: false,
             };
@@ -1681,6 +1788,11 @@ class SunseekerAdapter extends utils.Adapter {
      */
     async checkZone(sn, data) {
         if (data && typeof data === "string" && data.startsWith("{")) {
+            if (!this.sunseeker) {
+                this.log.error(`Cannot found class sunseeker!`);
+                return;
+            }
+            const meta = this.sunseeker.deviceMeta[sn];
             try {
                 const map_info = JSON.parse(data);
                 /**
@@ -1934,31 +2046,32 @@ class SunseekerAdapter extends utils.Adapter {
                     if (!Array.isArray(map_info.region_work)) {
                         return;
                     }
-                    if (this.sunseeker) {
-                        this.regionId[sn] = [];
-                        const meta = this.sunseeker.deviceMeta[sn];
-                        meta.custom_multi_sort = {};
-                        let count = 1;
-                        for (const region of map_info.region_work) {
-                            if (map_info.update_time) {
-                                region["mapId"] = map_info.update_time;
-                            } else {
-                                region["mapId"] = meta.mapid;
-                            }
-                            if (region.id) {
-                                meta.custom_multi_sort[region.id] = `0${count}`;
-                            }
-                            ++count;
-                            this.regionId[sn].push(region.id);
+                    this.regionId[sn] = [];
+                    meta.custom_multi_sort = {};
+                    let count = 1;
+                    for (const region of map_info.region_work) {
+                        if (map_info.update_time) {
+                            region["mapId"] = map_info.update_time;
+                        } else {
+                            region["mapId"] = meta.mapid;
                         }
-                        //ToDo search active region_id
-                        if (this.createObjectDone[`${sn}.schedule.zones_available`]) {
-                            await this.setState(`${this.namespace}.${sn}.schedule.zones_available`, {
-                                val: JSON.stringify(this.regionId[sn]),
-                                ack: true,
-                            });
+                        if (region.id) {
+                            meta.custom_multi_sort[region.id] = `0${count}`;
                         }
+                        ++count;
+                        this.regionId[sn].push(region.id);
                     }
+                    //ToDo search active region_id
+                    if (this.createObjectDone[`${sn}.schedule.zones_available`]) {
+                        await this.setState(`${this.namespace}.${sn}.schedule.zones_available`, {
+                            val: JSON.stringify(this.regionId[sn]),
+                            ack: true,
+                        });
+                    }
+                    await this.setState(`${sn}.remote.startZones`, {
+                        val: JSON.stringify(this.regionId[sn]),
+                        ack: true,
+                    });
                     await this.json2iob.parse(`${sn}.map.zones`, map_info.region_work, {
                         channelName: {
                             en: "Zones",
@@ -2118,6 +2231,238 @@ class SunseekerAdapter extends utils.Adapter {
                         }
                     }
                 }
+                if (map_info && map_info.region_customize) {
+                    if (!Array.isArray(map_info.region_customize)) {
+                        return;
+                    }
+                    await this.json2iob.parse(`${sn}.map.pattern`, map_info.region_customize, {
+                        channelName: {
+                            en: "Pattern",
+                            de: "Muster",
+                            ru: "Шаблон",
+                            pt: "Padrão",
+                            nl: "Patroon",
+                            fr: "Modèle",
+                            it: "Modello",
+                            es: "Patrón",
+                            pl: "Wzór",
+                            uk: "Візерунок",
+                            "zh-cn": "图案",
+                        },
+                        forceIndex: true,
+                        roles: {
+                            id: "value",
+                            area_id: "value",
+                            expiration_time: "value.time",
+                            last_edit_time: "value.time",
+                        },
+                    });
+                    await this.setObjectNotExistsAsync(`${this.namespace}.${sn}.map.pattern.delete_all_pattern`, {
+                        type: "state",
+                        common: {
+                            name: {
+                                en: "Clear all pattern",
+                                de: "Alle Muster löschen",
+                                ru: "Очистить все шаблоны",
+                                pt: "Limpar todos os padrões",
+                                nl: "Wis alle patronen",
+                                fr: "Effacer tous les motifs",
+                                it: "Cancella tutti i modelli",
+                                es: "Borrar todo patrón",
+                                pl: "Wyczyść wszystkie wzory",
+                                uk: "Очистити всі візерунки",
+                                "zh-cn": "清除所有模式",
+                            },
+                            type: "boolean",
+                            role: "button",
+                            write: true,
+                            read: false,
+                            def: false,
+                        },
+                        native: {},
+                    }).catch(error => {
+                        this.log.error(`pattern delete: ${error.name}: ${error.message}`);
+                    });
+                    await this.setObjectNotExistsAsync(`${this.namespace}.${sn}.map.pattern.delete_automatic`, {
+                        type: "state",
+                        common: {
+                            name: {
+                                en: "Automatic clear",
+                                de: "Automatische Löschung",
+                                ru: "Автоматическая очистка",
+                                pt: "Limpeza automática",
+                                nl: "Automatisch wissen",
+                                fr: "Effacement automatique",
+                                it: "Cancellazione automatica",
+                                es: "Borrado automático",
+                                pl: "Automatyczne czyszczenie",
+                                uk: "Автоматичне очищення",
+                                "zh-cn": "自动清除",
+                            },
+                            type: "number",
+                            role: "level",
+                            write: true,
+                            read: true,
+                            min: 5,
+                            max: 30,
+                            step: 5,
+                            def: 5,
+                            states: {
+                                5: "5 days",
+                                10: "10 days",
+                                15: "15 days",
+                                20: "20 days",
+                                25: "25 days",
+                                30: "30 days",
+                            },
+                        },
+                        native: {},
+                    }).catch(error => {
+                        this.log.error(`pattern clean: ${error.name}: ${error.message}`);
+                    });
+                    await this.setObjectNotExistsAsync(`${this.namespace}.${sn}.map.pattern.create_pattern`, {
+                        type: "state",
+                        common: {
+                            name: {
+                                en: "Create pattern (value points from region)",
+                                de: "Muster erstellen (Wertpunkte aus der Region)",
+                                ru: "Создать шаблон (значения точек из региона)",
+                                pt: "Criar padrão (pontos de valor da região)",
+                                nl: "Creëer een patroon (waardepunten uit de regio)",
+                                fr: "Créer un motif (points de valeur de la région)",
+                                it: "Crea un modello (punti valore dalla regione)",
+                                es: "Crear patrón (valorar puntos de la región)",
+                                pl: "Utwórz wzór (punkty wartości z regionu)",
+                                uk: "Створити візерунок (оцінка балів з регіону)",
+                                "zh-cn": "创建模式（来自区域的值点）",
+                            },
+                            type: "string",
+                            role: "json",
+                            write: true,
+                            read: true,
+                            def: JSON.stringify([]),
+                        },
+                        native: {},
+                    }).catch(error => {
+                        this.log.error(`pattern create: ${error.name}: ${error.message}`);
+                    });
+                    await this.setObjectNotExistsAsync(`${this.namespace}.${sn}.map.pattern.selecte_pattern`, {
+                        type: "state",
+                        common: {
+                            name: {
+                                en: "Select pattern",
+                                de: "Muster auswählen",
+                                ru: "Выберите шаблон",
+                                pt: "Selecione o padrão",
+                                nl: "Selecteer patroon",
+                                fr: "Sélectionner le motif",
+                                it: "Seleziona il modello",
+                                es: "Seleccionar patrón",
+                                pl: "Wybierz wzór",
+                                uk: "Виберіть візерунок",
+                                "zh-cn": "图案",
+                            },
+                            type: "string",
+                            role: "state",
+                            write: true,
+                            read: true,
+                            def: "FOUR_POINT_STAR",
+                            states: meta.pattern,
+                        },
+                        native: {},
+                    }).catch(error => {
+                        this.log.error(`pattern select: ${error.name}: ${error.message}`);
+                    });
+                    const pattern = Object.keys(map_info.region_customize).length;
+                    const pattern_obj = await this.loadChannels(sn, "map.pattern.0", false);
+                    const patterns = Object.keys(pattern_obj).length;
+                    for (let a = 1; a <= pattern; a++) {
+                        const path = `${sn}.map.pattern.0${a}`;
+                        if (!this.createObjectDone[path]) {
+                            this.createObjectDone[path] = true;
+                            await this.setObjectNotExistsAsync(`${this.namespace}.${path}.pattern_delete`, {
+                                type: "state",
+                                common: {
+                                    name: {
+                                        en: "Pattern delete",
+                                        de: "Muster löschen",
+                                        ru: "Удаление шаблона",
+                                        pt: "Excluir padrão",
+                                        nl: "Patroon verwijderen",
+                                        fr: "Suppression de motif",
+                                        it: "Eliminazione modello",
+                                        es: "Eliminar patrón",
+                                        pl: "Usuwanie wzoru",
+                                        uk: "Видалення візерунка",
+                                        "zh-cn": "删除模式",
+                                    },
+                                    type: "boolean",
+                                    role: "button",
+                                    write: true,
+                                    read: false,
+                                    def: false,
+                                },
+                                native: {},
+                            }).catch(error => {
+                                this.log.error(`pattern del: ${error.name}: ${error.message}`);
+                            });
+                            await this.extendObject(path, {
+                                common: {
+                                    name: {
+                                        en: `Pattern ${a}`,
+                                        de: `Muster ${a}`,
+                                        ru: `Шаблон ${a}`,
+                                        pt: `Padrão ${a}`,
+                                        nl: `Patroon ${a}`,
+                                        fr: `Modèle ${a}`,
+                                        it: `Modello ${a}`,
+                                        es: `Patrón ${a}`,
+                                        pl: `Wzór ${a}`,
+                                        uk: `Візерунок ${a}`,
+                                        "zh-cn": `图案 ${a}`,
+                                    },
+                                },
+                            });
+                            await this.extendObject(`${path}.img_value`, {
+                                common: {
+                                    name: {
+                                        en: "Change Image",
+                                        de: "Bild ändern",
+                                        ru: "Изменить изображение",
+                                        pt: "Alterar imagem",
+                                        nl: "Afbeelding wijzigen",
+                                        fr: "Changer l'image",
+                                        it: "Cambia immagine",
+                                        es: "Cambiar imagen",
+                                        pl: "Zmień obraz",
+                                        uk: "Змінити зображення",
+                                        "zh-cn": "更改图像",
+                                    },
+                                    write: true,
+                                    states: meta.pattern,
+                                },
+                            });
+                        }
+                    }
+                    if (patterns > pattern) {
+                        let count = pattern;
+                        let save = 0;
+                        for (let a = pattern; a <= patterns - 1; a++) {
+                            this.log.info(`Delete pattern: ${this.namespace}.${sn}.map.pattern.0${count}`);
+                            await this.delObjectAsync(`${this.namespace}.${sn}.map.pattern.0${count}`, {
+                                recursive: true,
+                            });
+                            if (this.createObjectDone[`${sn}.map.pattern.0${count}`]) {
+                                delete this.createObjectDone[`${sn}.map.pattern.0${count}`];
+                            }
+                            --count;
+                            ++save;
+                            if (save > 10) {
+                                break;
+                            }
+                        }
+                    }
+                }
                 this.log.debug(`${sn}: Create custom-multi-angle`);
             } catch (e) {
                 this.log.error(`checkZone: ${e}`);
@@ -2181,6 +2526,12 @@ class SunseekerAdapter extends utils.Adapter {
         if (setIdx > 0 && parts[setIdx] === "map_settings") {
             this.sunseeker.setLiveSettings(parts[setIdx - 2], state, parts[setIdx + 1]);
             this.setState(id, { val: state.val, ack: true });
+            return;
+        }
+        const patternIdx = parts.indexOf("pattern");
+        if (patternIdx > 0 && parts[patternIdx + 1]) {
+            const patternSn = parts[patternIdx - 2];
+            this.patternHandler(id, patternSn, state);
             return;
         }
         const mapIdx = parts.indexOf("map");
@@ -2651,30 +3002,11 @@ class SunseekerAdapter extends utils.Adapter {
                 return;
             }
             if (leaf === "bladeSpeed" || leaf === "bladeHeight") {
-                const key = leaf === "bladeSpeed" ? "speed" : "height";
-                try {
-                    await this.sunseeker.setBlade(sn, key, Number(state.val));
-                    this.updateDeviceAfterStateChange(sn);
-                    this.setState(id, { val: state.val, ack: true });
-                } catch (err) {
-                    this.log.error(`Blade-${key} for ${sn} failed: ${err.message}`);
-                }
+                this.sendBlade(id, sn, leaf, state);
                 return;
             }
             if (leaf === "rainFlag" || leaf === "rainDelayDuration") {
-                try {
-                    const flagVal =
-                        leaf === "rainFlag" ? state.val : (await this.getStateAsync(`${sn}.settings.rainFlag`))?.val;
-                    const durVal =
-                        leaf === "rainDelayDuration"
-                            ? state.val
-                            : (await this.getStateAsync(`${sn}.settings.rainDelayDuration`))?.val;
-                    await this.sunseeker.setRain(sn, Boolean(flagVal), Math.round(Number(durVal) || 0));
-                    this.updateDeviceAfterStateChange(sn);
-                    this.setState(id, { val: state.val, ack: true });
-                } catch (err) {
-                    this.log.error(`Rain delay for ${sn} failed: ${err.message}`);
-                }
+                this.sendRainFlag(id, sn, leaf, state);
                 return;
             }
         }
@@ -2684,8 +3016,256 @@ class SunseekerAdapter extends utils.Adapter {
         }
         const sn = parts[remoteIdx - 1];
         const command = parts[remoteIdx + 1];
+
         if (!this.sunseeker.devicesRaw[sn]) {
             this.log.warn(`onStateChange: Device ${sn} unknown`);
+            return;
+        }
+        this.sendRemoteCommand(id, sn, command, state);
+    }
+
+    /**
+     * @param {string} id
+     * @param {string} sn
+     * @param {ioBroker.State} state
+     */
+    async patternHandler(id, sn, state) {
+        if (!this.sunseeker) {
+            return;
+        }
+        const meta = this.sunseeker.deviceMeta[sn];
+        if (!meta || !meta.mapJson || !meta.mapJson.region_customize) {
+            this.log.warn(`${sn}: Missing device meta!`);
+            return;
+        }
+        const customize = meta.mapJson.region_customize;
+        const parts = id.split(".");
+        const nr = Number(parts[5]);
+        const command = parts.pop();
+        let all = [];
+        let img = null;
+        switch (command) {
+            case "create_pattern":
+                if (customize.length > 0) {
+                    for (const pattern of customize) {
+                        const oldPattern = {
+                            img_value: pattern.img_value,
+                            last_edit_time: pattern.last_edit_time,
+                            min_width: pattern.min_width,
+                            vertexs: pattern.points,
+                            img_id: pattern.id,
+                        };
+                        all.push(oldPattern);
+                    }
+                }
+                img = await this.getStateAsync(`${sn}.map.pattern.selecte_pattern`);
+                if (
+                    img &&
+                    typeof img.val === "string" &&
+                    meta.pattern[img.val] != null &&
+                    typeof state.val === "string" &&
+                    state.val.startsWith("[")
+                ) {
+                    try {
+                        const actTime = new Date().getTime();
+                        const newPattern = {
+                            img_value: img.val,
+                            last_edit_time: actTime,
+                            min_width: 2.4,
+                            vertexs: JSON.parse(state.val),
+                            img_id: actTime - 58535,
+                        };
+                        all.push(newPattern);
+                        await this.sunseeker.setDeviceProperty(sn, {
+                            id: "setCustomizeArea",
+                            key: "customize_area",
+                            custom_area_info: all,
+                        });
+                        if (this.patternTimeout[sn]) {
+                            this.log.warn(`Timeout is running!!!`);
+                            return;
+                        }
+                        this.updateDeviceAfterStateChange(sn);
+                        this.patternTimeout[sn] = this.setTimeout(async () => {
+                            this.patternTimeout[sn] = null;
+                            if (this.sunseeker) {
+                                await this.sunseeker.setDeviceProperty(sn, {
+                                    id: "setCustomizeArea",
+                                    key: "customize_area",
+                                    custom_area_info: [],
+                                });
+                            }
+                        }, 10 * 1000);
+                        await this.setState(id, { val: state.val, ack: true });
+                    } catch (e) {
+                        this.log.error(`Parse error: ${e}`);
+                    }
+                }
+                break;
+            case "delete_all_pattern":
+                if (state && typeof state.val === "boolean" && state.val) {
+                    await this.sunseeker.setDeviceProperty(sn, {
+                        id: "setCustomizeArea",
+                        key: "customize_area",
+                        custom_area_info: [],
+                    });
+                    await this.setState(id, { val: false, ack: true });
+                    this.updateDeviceAfterStateChange(sn);
+                }
+                break;
+            case "delete_automatic":
+                if (state && typeof state.val === "number") {
+                    const val = await this.sunseeker.setPatternExpirationTime(sn, state.val);
+                    if (val) {
+                        await this.setState(id, { val: state.val, ack: true });
+                        this.updateDeviceAfterStateChange(sn);
+                    }
+                }
+                break;
+            case "selecte_pattern":
+                if (state && typeof state.val === "string" && meta.pattern[state.val] != null) {
+                    await this.setState(id, { val: state.val, ack: true });
+                }
+                break;
+            case "pattern_delete":
+                if (typeof nr === "number") {
+                    const pattern_obj = await this.loadChannels(sn, "map.pattern.0", false);
+                    const patterns = Object.keys(pattern_obj).length;
+                    if (patterns == 1) {
+                        await this.sunseeker.setDeviceProperty(sn, {
+                            id: "setCustomizeArea",
+                            key: "customize_area",
+                            custom_area_info: [],
+                        });
+                        await this.setState(id, { val: false, ack: true });
+                        this.updateDeviceAfterStateChange(sn);
+                    } else if (patterns > 1) {
+                        const img_id = await this.getStateAsync(`${sn}.map.pattern.${parts[5]}.id`);
+                        if (img_id && typeof img_id.val === "number") {
+                            for (const pattern of customize) {
+                                const oldPattern = {
+                                    img_value: pattern.img_value,
+                                    last_edit_time: pattern.last_edit_time,
+                                    min_width: pattern.min_width,
+                                    vertexs: pattern.points,
+                                    img_id: pattern.id,
+                                };
+                                if (pattern.id != img_id.val) {
+                                    all.push(oldPattern);
+                                }
+                            }
+                            if (all.length > 0) {
+                                await this.sunseeker.setDeviceProperty(sn, {
+                                    id: "setCustomizeArea",
+                                    key: "customize_area",
+                                    custom_area_info: all,
+                                });
+                                await this.delObjectAsync(
+                                    `${this.namespace}.${sn}.map.pattern.${`0${patterns}`.slice(-2)}`,
+                                    {
+                                        recursive: true,
+                                    },
+                                );
+                                await this.setState(id, { val: false, ack: true });
+                                this.updateDeviceAfterStateChange(sn);
+                            }
+                        }
+                    }
+                }
+                break;
+            case "img_value":
+                if (
+                    typeof nr === "number" &&
+                    state &&
+                    typeof state.val === "string" &&
+                    meta.pattern[state.val] != null
+                ) {
+                    const img_id = await this.getStateAsync(`${sn}.map.pattern.${parts[5]}.id`);
+                    if (img_id && typeof img_id.val === "number") {
+                        for (const pattern of customize) {
+                            const oldPattern = {
+                                img_value: pattern.img_value,
+                                last_edit_time: pattern.last_edit_time,
+                                min_width: pattern.min_width,
+                                vertexs: pattern.points,
+                                img_id: pattern.id,
+                            };
+                            if (pattern.id == img_id.val) {
+                                oldPattern.img_value = state.val;
+                                oldPattern.last_edit_time = new Date().getTime();
+                            }
+                            all.push(oldPattern);
+                        }
+                        if (all.length > 0) {
+                            await this.sunseeker.setDeviceProperty(sn, {
+                                id: "setCustomizeArea",
+                                key: "customize_area",
+                                custom_area_info: all,
+                            });
+                            await this.setState(id, { val: state.val, ack: true });
+                            this.updateDeviceAfterStateChange(sn);
+                        }
+                    }
+                }
+                break;
+            default:
+                this.log.warn(`Command ${command} is unknwon!`);
+        }
+    }
+
+    /**
+     * @param {string} id
+     * @param {string} sn
+     * @param {string} command
+     * @param {ioBroker.State} state
+     */
+    async sendBlade(id, sn, command, state) {
+        if (!this.sunseeker) {
+            return;
+        }
+        const key = command === "bladeSpeed" ? "speed" : "height";
+        try {
+            await this.sunseeker.setBlade(sn, key, Number(state.val));
+            this.updateDeviceAfterStateChange(sn);
+            this.setState(id, { val: state.val, ack: true });
+        } catch (err) {
+            this.log.error(`Blade-${key} for ${sn} failed: ${err.message}`);
+        }
+    }
+
+    /**
+     * @param {string} id
+     * @param {string} sn
+     * @param {string} command
+     * @param {ioBroker.State} state
+     */
+    async sendRainFlag(id, sn, command, state) {
+        if (!this.sunseeker) {
+            return;
+        }
+        try {
+            const flagVal =
+                command === "rainFlag" ? state.val : (await this.getStateAsync(`${sn}.settings.rainFlag`))?.val;
+            const durVal =
+                command === "rainDelayDuration"
+                    ? state.val
+                    : (await this.getStateAsync(`${sn}.settings.rainDelayDuration`))?.val;
+            await this.sunseeker.setRain(sn, Boolean(flagVal), Math.round(Number(durVal) || 0));
+            this.updateDeviceAfterStateChange(sn);
+            this.setState(id, { val: state.val, ack: true });
+        } catch (err) {
+            this.log.error(`Rain delay for ${sn} failed: ${err.message}`);
+        }
+    }
+
+    /**
+     * @param {string} id
+     * @param {string} sn
+     * @param {string} command
+     * @param {ioBroker.State} state
+     */
+    async sendRemoteCommand(id, sn, command, state) {
+        if (!this.sunseeker) {
             return;
         }
         try {
@@ -2693,7 +3273,7 @@ class SunseekerAdapter extends utils.Adapter {
                 await this.sunseeker.updateDevice(sn);
             } else if (command === "refresh_property") {
                 await this.sunseeker.fetchInitialProperties();
-            } else if (command === "set_screen_durration") {
+            } else if (command === "set_screen_duration") {
                 await this.sunseeker.sendCommand(sn, command, state.val);
             } else if (command === "set_return_path") {
                 await this.sunseeker.sendCommand(sn, command, state.val);
@@ -2701,11 +3281,16 @@ class SunseekerAdapter extends utils.Adapter {
                 await this.sunseeker.sendCommand(sn, command, state.val);
             } else if (command === "set_border_distance") {
                 await this.sunseeker.sendCommand(sn, command, state.val);
+            } else if (command === "startZones") {
+                if (typeof state.val === "string" && state.val.startsWith("[")) {
+                    const mapids = JSON.parse(state.val);
+                    await this.sunseeker.sendCommand(sn, "start", mapids);
+                }
             } else {
                 await this.sunseeker.sendCommand(sn, command, state.val);
                 this.updateDeviceAfterStateChange(sn);
             }
-            this.setState(id, { val: state.val, ack: true });
+            await this.setState(id, { val: state.val, ack: true });
         } catch (err) {
             this.log.error(`Command ${command} for ${sn} failed: ${err.message}`);
         }
@@ -2991,9 +3576,9 @@ class SunseekerAdapter extends utils.Adapter {
                     }
                     let zigzag = [];
                     let count = 1;
-                    for (const zigzag of json.multi_zigzag_angles) {
+                    for (const zag of json.multi_zigzag_angles) {
                         if (state != `0${count}`) {
-                            zigzag.push(zigzag);
+                            zigzag.push(zag);
                         }
                     }
                     if (zigzag.length == 0) {
@@ -3001,6 +3586,7 @@ class SunseekerAdapter extends utils.Adapter {
                         json.plan_mode = 0;
                     } else {
                         json.plan_mode = 4;
+                        json.multi_zigzag_angles = zigzag;
                     }
                     this.sunseeker.setSettings(sn, json, "setCustom", "custom", null);
                     this.setState(id, { val: false, ack: true });
@@ -3442,14 +4028,8 @@ class SunseekerAdapter extends utils.Adapter {
      * @param {any} obj
      */
     removeNull(obj) {
-        if (typeof obj.firmwareVersion === "number") {
-            delete obj.firmwareVersion;
-        }
         if (typeof obj.rainDelayDuration === "string") {
             obj.rainDelayDuration = parseInt(obj.rainDelayDuration);
-        }
-        if (typeof obj.workStatusCode === "number") {
-            obj.workStatusCode = obj.workStatusCode.toString();
         }
         return JSON.parse(JSON.stringify(obj), (key, value) => {
             if (value === null) {
@@ -3695,7 +4275,7 @@ class SunseekerAdapter extends utils.Adapter {
                         type: "boolean",
                         role: "button",
                         write: true,
-                        read: true,
+                        read: false,
                         def: false,
                     },
                     native: {},
@@ -3731,7 +4311,7 @@ class SunseekerAdapter extends utils.Adapter {
                         type: "boolean",
                         role: "button",
                         write: true,
-                        read: true,
+                        read: false,
                         def: false,
                     },
                     native: {},

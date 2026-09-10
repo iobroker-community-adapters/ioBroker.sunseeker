@@ -34,6 +34,7 @@ declare class Sunseeker extends EventEmitter {
     unloading: boolean;
     requestLimit: Record<string, string>;
     maxRequest: number;
+    errorlimit: number;
 
     start(): Promise<void>;
     stop(): void;
@@ -69,11 +70,14 @@ declare class Sunseeker extends EventEmitter {
     setScheduleMode(sn: string, mode: number): void;
     readLivemapSettings(sn: string): Promise<void>;
     setLiveSettings(sn: string, value: ioBroker.State | null | undefined, attribut: string): void;
+    changeAttributeName(data: any): void;
+    getUpdateDevices(): Promise<void>;
+    hexToRGBA(hex: string | boolean | number): void;
 
     // polling-and-settings.js
     startPolling(): void;
     stopPolling(): void;
-    updateAllDevices(): Promise<void>;
+    updateAllDevices(first: boolean): Promise<void>;
     updateDevice(sn: string): Promise<void>;
     sendCommand(sn: string, command: string, value?: any): Promise<void>;
     setBlade(sn: string, key: "speed" | "height", value: number): Promise<void>;
@@ -97,6 +101,7 @@ declare class Sunseeker extends EventEmitter {
     setMarkAllAsRead(sn: string): Promise<void>;
     getScheduleX(sn: string): Promise<void>;
     getInfo(sn: string): Promise<void>;
+    setPatternExpirationTime(sn: string, value: number): Promise<boolean>;
 
     // mqtt.js
     initMqtt(): void;

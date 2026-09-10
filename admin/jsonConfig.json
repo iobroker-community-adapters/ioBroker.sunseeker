@@ -153,7 +153,34 @@
             "md": 6,
             "lg": 4,
             "xl": 4,
-            "default": 3000
+            "default": 6000
+        },
+        "restartlimit": {
+            "type": "number",
+            "label": "Restart limit",
+            "tooltip": "Restart limit tip",
+            "min": 1,
+            "max": 10,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4,
+            "default": 10
+        },
+        "errorlimit": {
+            "type": "number",
+            "label": "Error limit",
+            "tooltip": "Error limit tip",
+            "min": 1,
+            "max": 10,
+            "newLine": true,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4,
+            "default": 10
         },
         "_headerAdapterDelete": {
             "type": "header",

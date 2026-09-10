@@ -3,7 +3,7 @@
     "Username / E-Mail": "Username / E-Mail",
     "Password": "Password",
     "Region": "Region",
-    "API": "API",
+    "API": "New if your mower is wireless",
     "Polling Interval (Seconds)": "Polling Interval (Seconds)",
     "Language": "Language (Known Languages: da, de, fr, fi, pl, en)",
     "deleteCloudTip": "Delete session data (in case of login problems)",
@@ -12,5 +12,9 @@
     "deleteMqtt": "Delete mqtt data",
     "sessionDelete": "Caution – Only delete if a connection cannot be established!!!!",
     "Request limit": "HTTPS Request Limit (500-10000)",
-    "Request limit tip": "As a personal protection and against faulty JavaScript or adapter issues"
+    "Request limit tip": "As a personal protection and against faulty JavaScript or adapter issues",
+    "Restart limit": "Adapter restart limit",
+    "Restart limit tip": "Adapter restart limit per day (1-10)",
+    "Error limit": "HTTP request error limit",
+    "Error limit tip": "HTTP request error limit per day (1-10)"
 }
