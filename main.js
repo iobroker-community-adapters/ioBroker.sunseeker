@@ -3062,7 +3062,7 @@ class SunseekerAdapter extends utils.Adapter {
                 if (
                     img &&
                     typeof img.val === "string" &&
-                    meta.pattern.includes(img.val) &&
+                    meta.pattern[img.val] != null &&
                     typeof state.val === "string" &&
                     state.val.startsWith("[")
                 ) {
@@ -3123,7 +3123,7 @@ class SunseekerAdapter extends utils.Adapter {
                 }
                 break;
             case "selecte_pattern":
-                if (state && typeof state.val === "string" && meta.pattern.includes(state.val)) {
+                if (state && typeof state.val === "string" && meta.pattern[state.val] != null) {
                     await this.setState(id, { val: state.val, ack: true });
                 }
                 break;
@@ -3178,7 +3178,7 @@ class SunseekerAdapter extends utils.Adapter {
                     typeof nr === "number" &&
                     state &&
                     typeof state.val === "string" &&
-                    meta.pattern.includes(state.val)
+                    meta.pattern[state.val] != null
                 ) {
                     const img_id = await this.getStateAsync(`${sn}.map.pattern.${parts[5]}.id`);
                     if (img_id && typeof img_id.val === "number") {
