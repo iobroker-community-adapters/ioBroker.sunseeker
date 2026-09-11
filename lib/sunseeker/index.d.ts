@@ -142,7 +142,15 @@ declare class Sunseeker extends EventEmitter {
         native: any,
     ): Promise<void>;
     setStates(sn: string, data: any, isAvailable: any): Promise<void>;
-    addDeleteObject(sn: string, data: any, objChannel: string, objName: string, lang: any): Promise<void>;
+    addDeleteObject(
+        sn: string,
+        data: any,
+        objChannel: string,
+        objName: string,
+        lang: any,
+        name: any,
+        isAvailable: any,
+    ): Promise<void>;
     createLivemapSettings(sn: string): Promise<void>;
     createCustomMultiAngle(sn: string, path: string): Promise<void>;
     setCustomMultiAngle(sn: string, data: any, path: string): Promise<void>;

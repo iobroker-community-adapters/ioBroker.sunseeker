@@ -105,6 +105,16 @@ class SunseekerAdapter extends utils.Adapter {
         ++this.restartLimit.restartCount;
         await this.setRestartCount();
 
+        if (this.config.restartlimit < 0 || this.config.restartlimit > 10) {
+            this.log.warn(`Restartlimit changed! ${this.config.restartlimit}`);
+            this.config.restartlimit = 5;
+        }
+
+        if (this.config.errorlimit < 0 || this.config.errorlimit > 10) {
+            this.log.warn(`Errorlimit changed! ${this.config.errorlimit}`);
+            this.config.errorlimit = 5;
+        }
+
         const cfg = this.config;
         if (!cfg.username || !cfg.password) {
             this.log.error("Please set the username and password in the adapter settings.");
@@ -164,6 +174,7 @@ class SunseekerAdapter extends utils.Adapter {
         this.sunseeker.on("notice", payload => this.onSunseekerNotice(payload));
         this.sunseeker.on("mqtt", payload => this.onSunseekerMqtt(payload));
         this.sunseeker.on("objectExists", payload => this.onSunseekerObjectExists(payload));
+        this.sunseeker.on("deleteObjectExists", payload => this.onSunseekerDeleteObjectExists(payload));
         this.sunseeker.on("map", payload => this.onSunseekerMap(payload));
         this.sunseeker.on("livemap", payload => this.onSunseekerLivemap(payload));
         this.sunseeker.on("firmware", payload => this.onSunseekerFirmware(payload));
@@ -381,6 +392,15 @@ class SunseekerAdapter extends utils.Adapter {
      */
     onSunseekerObjectExists(path) {
         this.createObjectDone[path] = true;
+    }
+
+    /**
+     * @param {string} path
+     */
+    onSunseekerDeleteObjectExists(path) {
+        if (this.createObjectDone[path]) {
+            delete this.createObjectDone[path];
+        }
     }
 
     async onSunseekerUpdateDevices({ devices }) {
@@ -962,6 +982,8 @@ class SunseekerAdapter extends utils.Adapter {
         this.log.debug(`Multi: ${count_sort} - ${count_custom}`);
         if (count_custom != count_sort) {
             //Why is there a difference?
+            this.log.debug(`ZigZag diff: ${count_custom} - ${count_sort}`);
+            await this.sunseeker.sleep(3000);
         }
         if (count_custom > 0) {
             this.setState(`${this.namespace}.${sn}.map.zones.setAllCustomRaw`, {
@@ -1503,6 +1525,12 @@ class SunseekerAdapter extends utils.Adapter {
             this.setMowerRaw(sn, data_area);
             return;
         }
+        if (data.area_info) {
+            data.area_info = JSON.stringify(data.area_info);
+        }
+        if (data.custom_area_info) {
+            data.custom_area_info = JSON.stringify(data.custom_area_info);
+        }
         if (id == "relo_status") {
             data["relo_status"] = data.status;
             delete data.status;
@@ -1795,253 +1823,391 @@ class SunseekerAdapter extends utils.Adapter {
             const meta = this.sunseeker.deviceMeta[sn];
             try {
                 const map_info = JSON.parse(data);
-                /**
-                if (map_info && this.sunseeker) {
-                    if (map_info.region_channel) {
-                        if (!Array.isArray(map_info.region_channel)) {
-                            return;
-                        }
-                        if (map_info.region_channel.length > 0) {
-                            this.regionsCounter[sn].passage = map_info.region_channel.length;
-                            await this.json2iob.parse(`${sn}.map.passages`, map_info.region_channel, {
-                                channelName: {
-                                    en: "Passage areas",
-                                    de: "Durchgangsbereiche",
-                                    ru: "Проходы",
-                                    pt: "Áreas de passagem",
-                                    nl: "Doorgangsgebieden",
-                                    fr: "Zones de passage",
-                                    it: "aree di passaggio",
-                                    es: "Zonas de paso",
-                                    pl: "Obszary przejść",
-                                    uk: "Прохідні зони",
-                                    "zh-cn": "通道区域",
-                                },
-                                forceIndex: true,
-                            });
-                            const lang_p = {
-                                en: "Passage area delete",
-                                de: "Durchgangsbereich löschen",
-                                ru: "Удалить область прохода",
-                                pt: "área de passagem excluir",
-                                nl: "Doorgangsgebied verwijderen",
-                                fr: "Supprimer la zone de passage",
-                                it: "Eliminazione dell'area di passaggio",
-                                es: "Eliminar área de pasaje",
-                                pl: "Usunięcie obszaru przejścia",
-                                uk: "Видалення області проходу",
-                                "zh-cn": "通道区域删除",
-                            };
-                            this.sunseeker.addDeleteObject(sn, map_info.region_channel, "passages", "passage", lang_p);
-                        } else {
-                            if (this.regionsCounter[sn].passage > 0) {
-                                this.regionsCounter[sn].passage = 0;
-                                await this.delObjectAsync(`${this.namespace}.${sn}.map.passages`, {
-                                    recursive: true,
-                                });
-                            }
-                        }
+                if (map_info && map_info.region_channel) {
+                    if (!Array.isArray(map_info.region_channel)) {
+                        return;
                     }
-                    if (map_info.region_forbidden) {
-                        if (!Array.isArray(map_info.region_forbidden)) {
-                            return;
-                        }
-                        if (map_info.region_forbidden.length > 0) {
-                            this.regionsCounter[sn].forbidden = map_info.region_forbidden.length;
-                            await this.json2iob.parse(`${sn}.map.forbidden`, map_info.region_forbidden, {
-                                channelName: {
-                                    en: "Forbidden areas",
-                                    de: "Verbotene Bereiche",
-                                    ru: "Запретные зоны",
-                                    pt: "Áreas proibidas",
-                                    nl: "Verboden gebieden",
-                                    fr: "Zones interdites",
-                                    it: "Aree proibite",
-                                    es: "Zonas prohibidas",
-                                    pl: "Zakazane obszary",
-                                    uk: "Заборонені зони",
-                                    "zh-cn": "禁区",
+                    if (map_info.region_channel.length > 0) {
+                        this.regionsCounter[sn].passage = map_info.region_channel.length;
+                        await this.json2iob.parse(`${sn}.map.passages`, map_info.region_channel, {
+                            channelName: {
+                                en: "Passage areas",
+                                de: "Durchgangsbereiche",
+                                ru: "Проходы",
+                                pt: "Áreas de passagem",
+                                nl: "Doorgangsgebieden",
+                                fr: "Zones de passage",
+                                it: "aree di passaggio",
+                                es: "Zonas de paso",
+                                pl: "Obszary przejść",
+                                uk: "Прохідні зони",
+                                "zh-cn": "通道区域",
+                            },
+                            forceIndex: true,
+                        });
+                        const lang_p = {
+                            en: "Passage area delete",
+                            de: "Durchgangsbereich löschen",
+                            ru: "Удалить область прохода",
+                            pt: "área de passagem excluir",
+                            nl: "Doorgangsgebied verwijderen",
+                            fr: "Supprimer la zone de passage",
+                            it: "Eliminazione dell'area di passaggio",
+                            es: "Eliminar área de pasaje",
+                            pl: "Usunięcie obszaru przejścia",
+                            uk: "Видалення області проходу",
+                            "zh-cn": "通道区域删除",
+                        };
+                        const name_p = {
+                            en: "Passage areas <nr>",
+                            de: "Durchgangsbereiche <nr>",
+                            ru: "Проходы <nr>",
+                            pt: "Áreas de passagem <nr>",
+                            nl: "Doorgangsgebieden <nr>",
+                            fr: "Zones de passage <nr>",
+                            it: "aree di passaggio <nr>",
+                            es: "Zonas de paso <nr>",
+                            pl: "Obszary przejść <nr>",
+                            uk: "Прохідні зони <nr>",
+                            "zh-cn": "通道区域 <nr>",
+                        };
+                        this.sunseeker.addDeleteObject(
+                            sn,
+                            map_info.region_channel,
+                            "passages",
+                            "passage",
+                            lang_p,
+                            name_p,
+                            this.createObjectDone,
+                        );
+                        if (!this.createObjectDone[`${sn}.map.passages`]) {
+                            this.createObjectDone[`${sn}.map.passages`] = true;
+                            await this.extendObject(`${sn}.map.passages`, {
+                                common: {
+                                    icon: "img/passage.png",
                                 },
-                                forceIndex: true,
                             });
-                            const lang_f = {
-                                en: "Forbidden area delete",
-                                de: "Verbotener Bereich löschen",
-                                ru: "Удалить запрещенную область",
-                                pt: "Excluir área proibida",
-                                nl: "Verboden gebied verwijderen",
-                                fr: "Supprimer la zone interdite",
-                                it: "Eliminazione dell'area proibita",
-                                es: "Eliminar zona prohibida",
-                                pl: "Usuwanie obszaru zabronionego",
-                                uk: "Видалення забороненої зони",
-                                "zh-cn": "禁区删除",
-                            };
-                            this.sunseeker.addDeleteObject(
-                                sn,
-                                map_info.region_forbidden,
-                                "forbidden",
-                                "forbidden",
-                                lang_f,
-                            );
-                        } else {
-                            if (this.regionsCounter[sn].forbidden > 0) {
-                                this.regionsCounter[sn].forbidden = 0;
-                                await this.delObjectAsync(`${this.namespace}.${sn}.map.forbidden`, {
-                                    recursive: true,
-                                });
-                            }
                         }
-                    }
-                    if (map_info.region_obstacle) {
-                        if (!Array.isArray(map_info.region_obstacle)) {
-                            return;
-                        }
-                        if (map_info.region_obstacle.length > 0) {
-                            this.regionsCounter[sn].obstacle = map_info.region_obstacle.length;
-                            await this.json2iob.parse(`${sn}.map.obstacles`, map_info.region_obstacle, {
-                                channelName: {
-                                    en: "Obstacles",
-                                    de: "Hindernisse",
-                                    ru: "Препятствия",
-                                    pt: "Obstáculos",
-                                    nl: "Obstakels",
-                                    fr: "Obstacles",
-                                    it: "Ostacoli",
-                                    es: "Obstáculos",
-                                    pl: "Przeszkody",
-                                    uk: "Перешкоди",
-                                    "zh-cn": "障碍",
-                                },
-                                forceIndex: true,
+                    } else {
+                        //ToDo delete all, create, edit
+                        //{"appId":"14","cmd":"draw_passage","deviceSn":"12","id":"drawPassage","method":"action","points":[[-5.168,2.105],[-2.987,-0.076]]}
+                        if (this.regionsCounter[sn].passage > 0) {
+                            this.regionsCounter[sn].passage = 0;
+                            await this.delObjectAsync(`${this.namespace}.${sn}.map.passages`, {
+                                recursive: true,
                             });
-                            const lang_o = {
-                                en: "Obstacle area delete",
-                                de: "Hindernisbereich löschen",
-                                ru: "Удалить зону препятствий",
-                                pt: "área de obstáculo excluída",
-                                nl: "Obstakelgebied verwijderen",
-                                fr: "Supprimer la zone d'obstacles",
-                                it: "Eliminare l'area degli ostacoli",
-                                es: "Eliminar zona de obstáculos",
-                                pl: "Usuwanie obszaru przeszkód",
-                                uk: "Видалення зони перешкоди",
-                                "zh-cn": "障碍区域删除",
-                            };
-                            this.sunseeker.addDeleteObject(
-                                sn,
-                                map_info.region_obstacle,
-                                "obstacles",
-                                "obstacle",
-                                lang_o,
-                            );
-                        } else {
-                            if (this.regionsCounter[sn].obstacle > 0) {
-                                this.regionsCounter[sn].obstacle = 0;
-                                await this.delObjectAsync(`${this.namespace}.${sn}.map.obstacles`, {
-                                    recursive: true,
-                                });
-                            }
-                        }
-                    }
-                    if (map_info.region_placed_blank) {
-                        if (!Array.isArray(map_info.region_placed_blank)) {
-                            return;
-                        }
-                        if (map_info.region_placed_blank.length > 0) {
-                            this.regionsCounter[sn].placed = map_info.region_placed_blank.length;
-                            await this.json2iob.parse(`${sn}.map.placed_blank`, map_info.region_placed_blank, {
-                                channelName: {
-                                    en: "Placed blank areas",
-                                    de: "Platzierte leere Bereiche",
-                                    ru: "Заполненные пустые области",
-                                    pt: "Áreas em branco inseridas",
-                                    nl: "Ingevulde lege gebieden",
-                                    fr: "Zones vides placées",
-                                    it: "Posizionamento di aree vuote",
-                                    es: "Se colocaron áreas en blanco",
-                                    pl: "Umieszczono puste obszary",
-                                    uk: "Розміщені порожні області",
-                                    "zh-cn": "放置空白区域",
-                                },
-                                forceIndex: true,
-                            });
-                            const lang_pl = {
-                                en: "Placed blank area delete",
-                                de: "Platzierten leeren Bereich löschen",
-                                ru: "Размещено пустое место, удалить",
-                                pt: "Área em branco excluída",
-                                nl: "Leeg gebied verwijderd",
-                                fr: "Supprimer la zone vide insérée",
-                                it: "Area vuota inserita elimina",
-                                es: "Área en blanco colocada eliminar",
-                                pl: "Umieszczony pusty obszar usuń",
-                                uk: "Видалення розміщеної порожньої області",
-                                "zh-cn": "放置空白区域删除",
-                            };
-                            this.sunseeker.addDeleteObject(
-                                sn,
-                                map_info.region_placed_blank,
-                                "placed",
-                                "placed",
-                                lang_pl,
-                            );
-                        } else {
-                            if (this.regionsCounter[sn].placed > 0) {
-                                this.regionsCounter[sn].placed = 0;
-                                await this.delObjectAsync(`${this.namespace}.${sn}.map.placed_blank`, {
-                                    recursive: true,
-                                });
-                            }
-                        }
-                    }
-                    if (map_info.region_blank) {
-                        if (!Array.isArray(map_info.region_blank)) {
-                            return;
-                        }
-                        if (map_info.region_blank.length > 0) {
-                            this.regionsCounter[sn].blaank = map_info.region_blank.length;
-                            await this.json2iob.parse(`${sn}.map.blanks`, map_info.region_blank, {
-                                channelName: {
-                                    en: "Blank areas",
-                                    de: "Leere Bereiche",
-                                    ru: "Пустые участки",
-                                    pt: "Áreas em branco",
-                                    nl: "Lege gebieden",
-                                    fr: "Zones vides",
-                                    it: "Area vuota",
-                                    es: "Áreas en blanco",
-                                    pl: "Puste obszary",
-                                    uk: "Пусті області",
-                                    "zh-cn": "空白区域",
-                                },
-                                forceIndex: true,
-                            });
-                            const lang_b = {
-                                en: "Blank area delete",
-                                de: "Leeren Bereich löschen",
-                                ru: "Удалить пустую область",
-                                pt: "Excluir área em branco",
-                                nl: "Leeg gebied verwijderen",
-                                fr: "Supprimer la zone vide",
-                                it: "area vuota elimina",
-                                es: "eliminar área en blanco",
-                                pl: "Usuń pusty obszar",
-                                uk: "Видалення порожньої області",
-                                "zh-cn": "空白区域删除",
-                            };
-                            this.sunseeker.addDeleteObject(sn, map_info.region_placed_blank, "blanks", "blank", lang_b);
-                        } else {
-                            if (this.regionsCounter[sn].blank > 0) {
-                                this.regionsCounter[sn].blank = 0;
-                                await this.delObjectAsync(`${this.namespace}.${sn}.map.blanks`, {
-                                    recursive: true,
-                                });
-                            }
+                            delete this.createObjectDone[`${sn}.map.passages`];
                         }
                     }
                 }
-                 */
+                if (map_info && map_info.region_forbidden) {
+                    if (!Array.isArray(map_info.region_forbidden)) {
+                        return;
+                    }
+                    if (map_info.region_forbidden.length > 0) {
+                        this.regionsCounter[sn].forbidden = map_info.region_forbidden.length;
+                        await this.json2iob.parse(`${sn}.map.forbidden`, map_info.region_forbidden, {
+                            channelName: {
+                                en: "Forbidden areas",
+                                de: "Verbotene Bereiche",
+                                ru: "Запретные зоны",
+                                pt: "Áreas proibidas",
+                                nl: "Verboden gebieden",
+                                fr: "Zones interdites",
+                                it: "Aree proibite",
+                                es: "Zonas prohibidas",
+                                pl: "Zakazane obszary",
+                                uk: "Заборонені зони",
+                                "zh-cn": "禁区",
+                            },
+                            forceIndex: true,
+                        });
+                        const lang_f = {
+                            en: "Forbidden area delete",
+                            de: "Verbotener Bereich löschen",
+                            ru: "Удалить запрещенную область",
+                            pt: "Excluir área proibida",
+                            nl: "Verboden gebied verwijderen",
+                            fr: "Supprimer la zone interdite",
+                            it: "Eliminazione dell'area proibita",
+                            es: "Eliminar zona prohibida",
+                            pl: "Usuwanie obszaru zabronionego",
+                            uk: "Видалення забороненої зони",
+                            "zh-cn": "禁区删除",
+                        };
+                        const name_f = {
+                            en: "Forbidden areas <br>",
+                            de: "Verbotene Bereiche <br>",
+                            ru: "Запретные зоны <br>",
+                            pt: "Áreas proibidas <br>",
+                            nl: "Verboden gebieden <br>",
+                            fr: "Zones interdites <br>",
+                            it: "Aree proibite <br>",
+                            es: "Zonas prohibidas <br>",
+                            pl: "Zakazane obszary <br>",
+                            uk: "Заборонені зони <br>",
+                            "zh-cn": "禁区 <br>",
+                        };
+                        this.sunseeker.addDeleteObject(
+                            sn,
+                            map_info.region_forbidden,
+                            "forbidden",
+                            "forbidden",
+                            lang_f,
+                            name_f,
+                            this.createObjectDone,
+                        );
+                        if (!this.createObjectDone[`${sn}.map.forbidden`]) {
+                            this.createObjectDone[`${sn}.map.forbidden`] = true;
+                            await this.extendObject(`${sn}.map.forbidden`, {
+                                common: {
+                                    icon: "img/forbidden.png",
+                                },
+                            });
+                        }
+                    } else {
+                        //ToDo delete all, create, edit
+                        //forbidden tag 2 and type normal
+                        //forbidden night tag 2 and type dark
+                        //forbidden wall tag 1 and type normal
+                        if (this.regionsCounter[sn].forbidden > 0) {
+                            this.regionsCounter[sn].forbidden = 0;
+                            await this.delObjectAsync(`${this.namespace}.${sn}.map.forbidden`, {
+                                recursive: true,
+                            });
+                            delete this.createObjectDone[`${sn}.map.forbidden`];
+                        }
+                    }
+                }
+                if (map_info && map_info.region_obstacle) {
+                    if (!Array.isArray(map_info.region_obstacle)) {
+                        return;
+                    }
+                    if (map_info.region_obstacle.length > 0) {
+                        this.regionsCounter[sn].obstacle = map_info.region_obstacle.length;
+                        await this.json2iob.parse(`${sn}.map.obstacles`, map_info.region_obstacle, {
+                            channelName: {
+                                en: "Obstacles",
+                                de: "Hindernisse",
+                                ru: "Препятствия",
+                                pt: "Obstáculos",
+                                nl: "Obstakels",
+                                fr: "Obstacles",
+                                it: "Ostacoli",
+                                es: "Obstáculos",
+                                pl: "Przeszkody",
+                                uk: "Перешкоди",
+                                "zh-cn": "障碍",
+                            },
+                            forceIndex: true,
+                        });
+                        const lang_o = {
+                            en: "Obstacle area delete",
+                            de: "Hindernisbereich löschen",
+                            ru: "Удалить зону препятствий",
+                            pt: "área de obstáculo excluída",
+                            nl: "Obstakelgebied verwijderen",
+                            fr: "Supprimer la zone d'obstacles",
+                            it: "Eliminare l'area degli ostacoli",
+                            es: "Eliminar zona de obstáculos",
+                            pl: "Usuwanie obszaru przeszkód",
+                            uk: "Видалення зони перешкоди",
+                            "zh-cn": "障碍区域删除",
+                        };
+                        const name_o = {
+                            en: "Obstacles <nr>",
+                            de: "Hindernisse <nr>",
+                            ru: "Препятствия <nr>",
+                            pt: "Obstáculos <nr>",
+                            nl: "Obstakels <nr>",
+                            fr: "Obstacles <nr>",
+                            it: "Ostacoli <nr>",
+                            es: "Obstáculos <nr>",
+                            pl: "Przeszkody <nr>",
+                            uk: "Перешкоди <nr>",
+                            "zh-cn": "障碍 <nr>",
+                        };
+                        this.sunseeker.addDeleteObject(
+                            sn,
+                            map_info.region_obstacle,
+                            "obstacles",
+                            "obstacle",
+                            lang_o,
+                            name_o,
+                            this.createObjectDone,
+                        );
+                        if (!this.createObjectDone[`${sn}.map.obstacles`]) {
+                            this.createObjectDone[`${sn}.map.obstacles`] = true;
+                            await this.extendObject(`${sn}.map.obstacles`, {
+                                common: {
+                                    icon: "img/obstacle.png",
+                                },
+                            });
+                        }
+                    } else {
+                        if (this.regionsCounter[sn].obstacle > 0) {
+                            this.regionsCounter[sn].obstacle = 0;
+                            await this.delObjectAsync(`${this.namespace}.${sn}.map.obstacles`, {
+                                recursive: true,
+                            });
+                            delete this.createObjectDone[`${sn}.map.obstacles`];
+                        }
+                    }
+                }
+                if (map_info && map_info.region_placed_blank) {
+                    if (!Array.isArray(map_info.region_placed_blank)) {
+                        return;
+                    }
+                    if (map_info.region_placed_blank.length > 0) {
+                        this.regionsCounter[sn].placed = map_info.region_placed_blank.length;
+                        await this.json2iob.parse(`${sn}.map.placed_blank`, map_info.region_placed_blank, {
+                            channelName: {
+                                en: "Safe areas",
+                                de: "Sichere Bereiche",
+                                ru: "Безопасные зоны",
+                                pt: "Áreas seguras",
+                                nl: "Veilige gebieden",
+                                fr: "Zones sécurisées",
+                                it: "Zone sicure",
+                                es: "Zonas seguras",
+                                pl: "Bezpieczne obszary",
+                                uk: "Безпечні зони",
+                                "zh-cn": "安全区域",
+                            },
+                            forceIndex: true,
+                        });
+                        const lang_pl = {
+                            en: "Delete safe area",
+                            de: "Sicheren Bereich löschen",
+                            ru: "Удалить безопасную зону",
+                            pt: "Excluir área segura",
+                            nl: "Veilig gebied verwijderen",
+                            fr: "Supprimer la zone de sécurité",
+                            it: "Elimina l'area sicura",
+                            es: "Eliminar zona segura",
+                            pl: "Usuń obszar bezpieczny",
+                            uk: "Видалити безпечну зону",
+                            "zh-cn": "删除安全区域",
+                        };
+                        const name_pl = {
+                            en: "Safe areas <nr>",
+                            de: "Sichere Bereiche <nr>",
+                            ru: "Безопасные зоны <nr>",
+                            pt: "Áreas seguras <nr>",
+                            nl: "Veilige gebieden <nr>",
+                            fr: "Zones sécurisées <nr>",
+                            it: "Zone sicure <nr>",
+                            es: "Zonas seguras <nr>",
+                            pl: "Bezpieczne obszary <nr>",
+                            uk: "Безпечні зони <nr>",
+                            "zh-cn": "安全区域 <nr>",
+                        };
+                        this.sunseeker.addDeleteObject(
+                            sn,
+                            map_info.region_placed_blank,
+                            "placed",
+                            "placed",
+                            lang_pl,
+                            name_pl,
+                            this.createObjectDone,
+                        );
+                        if (!this.createObjectDone[`${sn}.map.placed_blank`]) {
+                            this.createObjectDone[`${sn}.map.placed_blank`] = true;
+                            await this.extendObject(`${sn}.map.placed_blank`, {
+                                common: {
+                                    icon: "img/placed.png",
+                                },
+                            });
+                        }
+                    } else {
+                        //ToDo delete all, create, edit
+                        //{"appId":"12","area_info":[{"map_id":1789068055377,"vertexs":[[-3.542,3.499],[-3.542,0.918],[-6.123,0.918],[-6.123,3.499],[-3.542,3.499]]}],"deviceSn":"12","id":"setPlacedBlankArea","key":"placed_blank_area","method":"set_property"}
+                        if (this.regionsCounter[sn].placed > 0) {
+                            this.regionsCounter[sn].placed = 0;
+                            await this.delObjectAsync(`${this.namespace}.${sn}.map.placed_blank`, {
+                                recursive: true,
+                            });
+                            delete this.createObjectDone[`${sn}.map.placed_blank`];
+                        }
+                    }
+                }
+
+                if (map_info.region_blank) {
+                    if (!Array.isArray(map_info.region_blank)) {
+                        return;
+                    }
+                    if (map_info.region_blank.length > 0) {
+                        this.regionsCounter[sn].blank = map_info.region_blank.length;
+                        await this.json2iob.parse(`${sn}.map.blank`, map_info.region_blank, {
+                            channelName: {
+                                en: "Blank areas",
+                                de: "Leere Bereiche",
+                                ru: "Пустые участки",
+                                pt: "Áreas em branco",
+                                nl: "Lege gebieden",
+                                fr: "Zones vides",
+                                it: "Area vuota",
+                                es: "Áreas en blanco",
+                                pl: "Puste obszary",
+                                uk: "Пусті області",
+                                "zh-cn": "空白区域",
+                            },
+                            forceIndex: true,
+                        });
+                        const lang_b = {
+                            en: "Blank area delete",
+                            de: "Leeren Bereich löschen",
+                            ru: "Удалить пустую область",
+                            pt: "Excluir área em branco",
+                            nl: "Leeg gebied verwijderen",
+                            fr: "Supprimer la zone vide",
+                            it: "area vuota elimina",
+                            es: "eliminar área en blanco",
+                            pl: "Usuń pusty obszar",
+                            uk: "Видалення порожньої області",
+                            "zh-cn": "空白区域删除",
+                        };
+                        const name_b = {
+                            en: "Blank areas <br>",
+                            de: "Leere Bereiche <br>",
+                            ru: "Пустые участки <br>",
+                            pt: "Áreas em branco <br>",
+                            nl: "Lege gebieden <br>",
+                            fr: "Zones vides <br>",
+                            it: "Area vuota <br>",
+                            es: "Áreas en blanco <br>",
+                            pl: "Puste obszary <br>",
+                            uk: "Пусті області <br>",
+                            "zh-cn": "空白区域 <br>",
+                        };
+                        this.sunseeker.addDeleteObject(
+                            sn,
+                            map_info.region_blank,
+                            "blank",
+                            "blank",
+                            lang_b,
+                            name_b,
+                            this.createObjectDone,
+                        );
+                        if (!this.createObjectDone[`${sn}.map.blank`]) {
+                            this.createObjectDone[`${sn}.map.blank`] = true;
+                            await this.extendObject(`${sn}.map.blank`, {
+                                common: {
+                                    icon: "img/blank.png",
+                                },
+                            });
+                        }
+                    } else {
+                        if (this.regionsCounter[sn].blank > 0) {
+                            this.regionsCounter[sn].blank = 0;
+                            await this.delObjectAsync(`${this.namespace}.${sn}.map.blank`, {
+                                recursive: true,
+                            });
+                            delete this.createObjectDone[`${sn}.map.blank`];
+                        }
+                    }
+                }
+
                 if (map_info && map_info.region_work) {
                     if (!Array.isArray(map_info.region_work)) {
                         return;
@@ -2534,6 +2700,36 @@ class SunseekerAdapter extends utils.Adapter {
             this.patternHandler(id, patternSn, state);
             return;
         }
+        const passageIdx = parts.indexOf("passages");
+        if (passageIdx > 0 && parts[passageIdx + 2] === "delete_passage") {
+            const passageSn = parts[passageIdx - 2];
+            this.deleteRegion(id, passageSn, "region_channel", "passages");
+            return;
+        }
+        const forbiddenIdx = parts.indexOf("forbidden");
+        if (forbiddenIdx > 0 && parts[forbiddenIdx + 2] === "delete_forbidden") {
+            const forbiddenSn = parts[forbiddenIdx - 2];
+            this.deleteRegion(id, forbiddenSn, "region_forbidden", "forbidden");
+            return;
+        }
+        const obstacleIdx = parts.indexOf("obstacles");
+        if (obstacleIdx > 0 && parts[obstacleIdx + 2] === "delete_obstacle") {
+            const obstacleSn = parts[obstacleIdx - 2];
+            this.deleteRegion(id, obstacleSn, "region_obstacle", "obstacles");
+            return;
+        }
+        const placed_blankIdx = parts.indexOf("placed_blank");
+        if (placed_blankIdx > 0 && parts[placed_blankIdx + 2] === "delete_placed_blank") {
+            const placed_blankSn = parts[placed_blankIdx - 2];
+            this.deleteRegion(id, placed_blankSn, "region_placed_blank", "placed_blank");
+            return;
+        }
+        const blankIdx = parts.indexOf("blank");
+        if (blankIdx > 0 && parts[blankIdx + 2] === "delete_blank") {
+            const blankSn = parts[blankIdx - 2];
+            this.deleteRegion(id, blankSn, "region_blank", "blank");
+            return;
+        }
         const mapIdx = parts.indexOf("map");
         if (mapIdx > 0 && parts[mapIdx + 1]) {
             const snr = parts[mapIdx - 1];
@@ -2676,13 +2872,6 @@ class SunseekerAdapter extends utils.Adapter {
                     const result = id.substring(0, lastIndex);
                     const zoneId = await this.getStateAsync(`${result}.id`);
                     if (zoneId && typeof zoneId.val === "number") {
-                        //const meta = this.sunseeker.deviceMeta[snr];
-                        /**
-                         * type = 0 region_workzone
-                         * type = 2 region_passage
-                         * type = 3 region_obstacle
-                         * type = 4 region_forbidden
-                         */
                         const zoneId_id = {
                             region_id: zoneId.val,
                             region_name: state.val,
@@ -3022,6 +3211,82 @@ class SunseekerAdapter extends utils.Adapter {
             return;
         }
         this.sendRemoteCommand(id, sn, command, state);
+    }
+
+    /**
+     * @param {string} id
+     * @param {string} sn
+     * @param {string} region
+     * @param {string} [zone]
+     */
+    async deleteRegion(id, sn, region, zone) {
+        if (!this.sunseeker) {
+            return;
+        }
+        const meta = this.sunseeker.deviceMeta[sn];
+        if (!meta || !meta.mapJson || !meta.mapJson[region]) {
+            this.log.warn(`${sn}: Missing device meta!`);
+            return;
+        }
+        const area = meta.mapJson[region];
+        const parts = id.split(".");
+        const nr = Number(parts[5]);
+        const area_obj = await this.loadChannels(sn, `map.${zone}.0`, false);
+        const areas = Object.keys(area_obj).length;
+        if (areas < 0) {
+            this.log.warn(`Cannot found areas from ${id}`);
+            return;
+        }
+        let type = -1;
+        /**
+         * type = 0 region_work -> zones -> *
+         * type = 2 region_channel -> passage area -> map.passages
+         * type = 3 region_obstacle -> obstacle area -> map.obstacles
+         * type = 4 region_forbidden -> forbidden area -> map.forbidden
+         * type = 8 region_placed_blank -> safe area -> map.placed_blank
+         * type = ? region_blank -> blank -> map.blank
+         * type = ? region_forbid_trim
+         * type = ? divide_area_work
+         */
+        switch (zone) {
+            case "passages":
+                type = 2;
+                break;
+            case "forbidden":
+                type = 4;
+                break;
+            case "obstacles":
+                type = 3;
+                break;
+            case "placed_blank":
+                type = 8;
+                break;
+            case "blank":
+                //ToDo search type
+                type = -1;
+                break;
+            default:
+                this.log.warn(`Type ${zone} is unknwon!`);
+        }
+        if (typeof nr === "number" && type !== -1) {
+            const map_id = await this.getStateAsync(`${sn}.map.${zone}.${parts[5]}.id`);
+            if (map_id && typeof map_id.val === "number") {
+                const map_check = area.filter(m => m.id == map_id.val);
+                if (map_check) {
+                    await this.sunseeker.setDeviceProperty(sn, {
+                        id: "deleteRegions",
+                        key: "delete_region",
+                        region_info: [{ region_id: map_id.val, type: type }],
+                    });
+                    await this.setState(id, { val: false, ack: true });
+                    this.updateDeviceAfterStateChange(sn);
+                } else {
+                    this.log.warn(`Cannot found map_id ${map_id.val}`);
+                }
+            } else {
+                this.log.warn(`Cannot found map_id/timestamp from ${sn}.map.${zone}.${parts[5]}.id`);
+            }
+        }
     }
 
     /**
