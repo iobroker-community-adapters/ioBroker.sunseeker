@@ -185,6 +185,9 @@ class SunseekerAdapter extends utils.Adapter {
         this.sunseeker.on("mqtt_auth", payload => this.onSunseekerMqttAuth(payload));
         this.sunseeker.on("session", payload => this.onSunseekerSession(payload));
         this.sunseeker.on("mode", payload => this.onSunseekerScheduleMode(payload));
+        this.sunseeker.on("fence", payload => this.onSunseekerFenceSettings(payload));
+        this.sunseeker.on("theft", payload => this.onSunseekerInfoTheft(payload));
+        this.sunseeker.on("position", payload => this.onSunseekerInfoPosition(payload));
 
         this.subscribeStates("*");
 
@@ -401,6 +404,140 @@ class SunseekerAdapter extends utils.Adapter {
         if (this.createObjectDone[path]) {
             delete this.createObjectDone[path];
         }
+    }
+
+    async onSunseekerFenceSettings({ sn, fence }) {
+        if (!Array.isArray(fence) || !this.sunseeker) {
+            this.log.warn(`Fence is not array!!`);
+            return;
+        }
+        const pos = {};
+        for (const fence_single of fence) {
+            if (fence_single.id != null) {
+                pos[fence_single.id] = fence_single.name;
+            }
+        }
+        let common;
+        if (Object.keys(pos).length > 0) {
+            common = {
+                name: {
+                    en: "Fence range",
+                    de: "Zaunbereich",
+                    ru: "Диапазон ограждения",
+                    pt: "Faixa de cercas",
+                    nl: "Hekwerkbereik",
+                    fr: "Gamme de clôtures",
+                    it: "Recinto di recinzione",
+                    es: "Gama de vallas",
+                    pl: "Zakres ogrodzenia",
+                    uk: "Асортимент парканів",
+                    "zh-cn": "围栏范围",
+                },
+                type: "number",
+                role: "level",
+                write: true,
+                read: true,
+                min: 1,
+                max: 3,
+                def: 1,
+                states: pos,
+            };
+            await this.sunseeker.createDataPoint(
+                `${this.namespace}.${sn}.antiTheft.fence`,
+                common,
+                "state",
+                null,
+                null,
+                null,
+            );
+        }
+        common = {
+            name: {
+                en: "Digital fence",
+                de: "Digitaler Zaun",
+                ru: "Цифровой забор",
+                pt: "Cerca digital",
+                nl: "Digitale omheining",
+                fr: "Clôture numérique",
+                it: "Recinzione digitale",
+                es: "Valla digital",
+                pl: "Cyfrowe ogrodzenie",
+                uk: "Цифрова огорожа",
+                "zh-cn": "数字围栏",
+            },
+            type: "boolean",
+            role: "switch",
+            write: true,
+            read: true,
+            def: false,
+        };
+        await this.sunseeker.createDataPoint(
+            `${this.namespace}.${sn}.antiTheft.fence_digital`,
+            common,
+            "state",
+            null,
+            null,
+            null,
+        );
+    }
+
+    async onSunseekerInfoTheft({ sn, theft }) {
+        if (theft.fenceRadiusSettingId != null) {
+            await this.setState(`${sn}.antiTheft.fence`, { val: Number(theft.fenceRadiusSettingId), ack: true });
+            delete theft.fenceRadiusSettingId;
+        }
+        if (theft.fenceStatus != null) {
+            const val = theft.fenceStatus == 1 ? true : false;
+            await this.setState(`${sn}.antiTheft.fence_digital`, { val: val, ack: true });
+            delete theft.fenceStatus;
+        }
+        const cleanup = this.removeNull(theft);
+        await this.json2iob.parse(`${sn}.antiTheft`, cleanup, {
+            channelName: {
+                en: "Anti-Theft",
+                de: "Diebstahlschutz",
+                ru: "Противоугонная система",
+                pt: "Antifurto",
+                nl: "Diefstalbeveiliging",
+                fr: "Système antivol",
+                it: "Antifurto",
+                es: "Sistema antirrobo",
+                pl: "Antykradzieżowy",
+                uk: "Антикрадіжка",
+                "zh-cn": "防盗",
+            },
+            forceIndex: true,
+            roles: {
+                fenceCenterLon: "value.gps.latitude",
+                fenceCenterLat: "value.gps.latitude",
+            },
+        });
+    }
+
+    async onSunseekerInfoPosition({ sn, pos }) {
+        const cleanup = this.removeNull(pos);
+        await this.json2iob.parse(`${sn}.antiTheft`, cleanup, {
+            channelName: {
+                en: "Anti-Theft",
+                de: "Diebstahlschutz",
+                ru: "Противоугонная система",
+                pt: "Antifurto",
+                nl: "Diefstalbeveiliging",
+                fr: "Système antivol",
+                it: "Antifurto",
+                es: "Sistema antirrobo",
+                pl: "Antykradzieżowy",
+                uk: "Антикрадіжка",
+                "zh-cn": "防盗",
+            },
+            forceIndex: true,
+            roles: {
+                lon: "value.gps.latitude",
+                lat: "value.gps.latitude",
+                mapLon: "value.gps.latitude",
+                mapLat: "value.gps.latitude",
+            },
+        });
     }
 
     async onSunseekerUpdateDevices({ devices }) {
@@ -2666,6 +2803,23 @@ class SunseekerAdapter extends utils.Adapter {
                 return;
             }
         }
+        const theftIdx = parts.indexOf("antiTheft");
+        if (theftIdx > 0) {
+            if (parts[theftIdx + 1] === "fence") {
+                const sn_theft = parts[theftIdx - 1];
+                if (typeof state.val === "number" && (state.val == 1 || state.val == 2 || state.val == 3)) {
+                    this.setAntiTheft(id, sn_theft, "fence", state.val);
+                }
+                return;
+            }
+            if (parts[theftIdx + 1] === "fence_digital") {
+                const sn_theft = parts[theftIdx - 1];
+                if (typeof state.val === "boolean") {
+                    this.setAntiTheft(id, sn_theft, "fence_digital", state.val);
+                }
+                return;
+            }
+        }
         const noticeIdx = parts.indexOf("notice");
         if (noticeIdx > 0) {
             if (parts[noticeIdx] === "notice") {
@@ -3495,6 +3649,64 @@ class SunseekerAdapter extends utils.Adapter {
             this.setState(id, { val: state.val, ack: true });
         } catch (err) {
             this.log.error(`Blade-${key} for ${sn} failed: ${err.message}`);
+        }
+    }
+
+    /**
+     * @param {string} id
+     * @param {string} sn
+     * @param {string} set
+     * @param {number | boolean} state
+     */
+    async setAntiTheft(id, sn, set, state) {
+        if (!this.sunseeker) {
+            return;
+        }
+        const meta = this.sunseeker.deviceMeta[sn];
+        if (!meta) {
+            this.log.warn(`${sn}: Missing deviceMeta!`);
+            return;
+        }
+        if (!meta.fenceRadiusSettingId) {
+            this.log.warn(`${sn}: Missing radius!`);
+            return;
+        }
+        if (!meta.mapLon) {
+            this.log.warn(`${sn}: Missing mapLon!`);
+            return;
+        }
+        if (!meta.mapLat) {
+            this.log.warn(`${sn}: Missing mapLat!`);
+            return;
+        }
+        if (!meta.antiTheftSn) {
+            this.log.warn(`${sn}: Missing antiTheftSn!`);
+            return;
+        }
+        let data = {};
+        if (set === "fence") {
+            data = {
+                fenceCenterLat: meta.mapLat,
+                fenceCenterLon: meta.mapLon,
+                fenceRadiusSettingId: state.toString(),
+                fenceStatus: "1",
+                sn: meta.antiTheftSn,
+            };
+        } else if (set === "fence_digital") {
+            data = {
+                fenceCenterLat: meta.mapLat,
+                fenceCenterLon: meta.mapLon,
+                fenceRadiusSettingId: meta.fenceRadiusSettingId,
+                fenceStatus: state ? "1" : "0",
+                sn: meta.antiTheftSn,
+            };
+        }
+        if (Object.keys(data).length > 0) {
+            const resp = await this.sunseeker.setAntiTheftX(data);
+            if (resp) {
+                this.sunseeker.updateTheft(sn);
+                await this.setState(id, { val: state, ack: true });
+            }
         }
     }
 

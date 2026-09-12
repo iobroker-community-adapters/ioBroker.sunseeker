@@ -102,6 +102,9 @@ declare class Sunseeker extends EventEmitter {
     getScheduleX(sn: string): Promise<void>;
     getInfo(sn: string): Promise<void>;
     setPatternExpirationTime(sn: string, value: number): Promise<boolean>;
+    createFence(sn: string): Promise<void>;
+    updateTheft(sn: string): Promise<void>;
+    setAntiTheftX(data: any): Promise<boolean>;
 
     // mqtt.js
     initMqtt(): void;
