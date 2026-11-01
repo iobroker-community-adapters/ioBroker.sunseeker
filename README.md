@@ -23,7 +23,7 @@ Connects Sunseeker robotic lawn mowers (also rebranded as Adano, Brücke, etc.) 
 
 - ioBroker js-controller `>= 6.0.11`
 - Admin `>= 7.8.23`
-- Node.js `>= 22`
+- Node.js `>= 22.19.0`
 - Sunseeker cloud account (e-mail + password, same as in the mobile app)
 
 ## API overview
@@ -118,8 +118,8 @@ The Sunseeker API exposes far more fields than the adapter currently writes. All
 -->
 
 ### **WORK IN PROGRESS**
-- (copilot) Adapter requires node.js >= 22.19.0 now
 
+- (copilot) Adapter requires node.js >= 22.19.0 now
 - (Lucky-ESA) Adaptation for the S5-Gen-2 mower
 
 ### 0.0.5 (2026-10-24)

@@ -49,11 +49,20 @@ class SunseekerAdapter extends utils.Adapter {
         this.updateDeviceStateChange = null;
         this.createObjectDone = {};
         this.firstStart = {};
+        this.wifi = [];
         this.firstStartTimeout = null;
         this.availableMaps = null;
         this.regionsCounter = {};
         this.regionId = {};
         this.notice = {};
+        this.changeMail = {
+            appType: 3,
+            appVersion: "",
+            code: "",
+            newUserName: "",
+            operatingSystemCode: "android",
+            randomStr: "",
+        };
         this.patternTimeout = {};
         this.restartLimit = {
             restartCount: 0,
@@ -216,6 +225,8 @@ class SunseekerAdapter extends utils.Adapter {
         this.sunseeker.on("sharing", (sn, data) => this.onSunseekerSharingUser(sn, data));
         this.sunseeker.on("mqttInvite", (sn, data) => this.onSunseekerInviteCheck(sn, data));
         this.sunseeker.on("deviceSettingsState", (sn, data) => this.onSunseekerDeviceSettingsState(sn, data));
+        this.sunseeker.on("wifi", payload => this.onSunseekerWifi(payload));
+        this.sunseeker.on("appInfo", data => this.onSunseekerAppInfo(data));
         //this.sunseeker.on("event", payload => this.onSunseekerEvent(payload));
         //this.sunseeker.on("notify", payload => this.onSunseekerNotify(payload));
         //this.sunseeker.on("countUnreadMessage", payload => this.onSunseekerCountUnread(payload));
@@ -373,9 +384,53 @@ class SunseekerAdapter extends utils.Adapter {
                         }
                     }
                     break;
-                case "sendOwnRequest":
-                    if (obj.callback) {
-                        this.sendTo(obj.from, obj.command, [{ info: "In progress" }], obj.callback);
+                case "createProfile":
+                    if (obj.message && obj.message.parameter && obj.message.parameter != "" && this.sunseeker) {
+                        if (obj.message.parameter != "unhide") {
+                            this.log.warn(`createProfile: ${obj.message.parameter} unknown`);
+                            if (obj.callback) {
+                                this.sendTo(
+                                    obj.from,
+                                    obj.command,
+                                    [{ info: `${obj.message.parameter} unknown` }],
+                                    obj.callback,
+                                );
+                            }
+                            return;
+                        }
+                        this.sunseeker.ensureProfileStates();
+                        if (obj.callback) {
+                            this.sendTo(obj.from, obj.command, [{ info: "OK" }], obj.callback);
+                        }
+                    } else {
+                        if (obj.callback) {
+                            this.sendTo(obj.from, obj.command, [{ info: "Error" }], obj.callback);
+                        }
+                    }
+                    break;
+                case "createProfileSN":
+                    if (obj.message && obj.message.parameter && obj.message.parameter != "" && this.sunseeker) {
+                        if (!this.sunseeker.devicesRaw[obj.message.parameter]) {
+                            this.log.warn(`createProfileSN: Device ${obj.message.parameter} unknown`);
+                            if (obj.callback) {
+                                this.sendTo(
+                                    obj.from,
+                                    obj.command,
+                                    [{ info: `Device ${obj.message.parameter} unknown` }],
+                                    obj.callback,
+                                );
+                            }
+                            return;
+                        }
+                        this.sunseeker.ensureProfileStatesSN(obj.message.parameter);
+                        this.sunseeker.setProfile(obj.message.parameter);
+                        if (obj.callback) {
+                            this.sendTo(obj.from, obj.command, [{ info: "OK" }], obj.callback);
+                        }
+                    } else {
+                        if (obj.callback) {
+                            this.sendTo(obj.from, obj.command, [{ info: "Error" }], obj.callback);
+                        }
                     }
                     break;
                 default:
@@ -655,6 +710,51 @@ class SunseekerAdapter extends utils.Adapter {
                 descriptions: objectName.MOWER_RAW_MQTT,
             });
         }
+    }
+
+    async onSunseekerWifi({ sn, data }) {
+        if (!data || !data.data || !Array.isArray(data.data) || !this.sunseeker) {
+            return;
+        }
+        const cleanup = this.removeNull(data.data);
+        await this.json2iob.parse(`${sn}.profile.wifi`, cleanup, {
+            channelName: {
+                en: "Wifi information",
+                de: "WLAN-Informationen",
+                ru: "Информация о Wi-Fi",
+                pt: "Informações sobre Wi-Fi",
+                nl: "Wifi-informatie",
+                fr: "Informations sur le Wi-Fi",
+                it: "Informazioni sul Wi-Fi",
+                es: "Información sobre wifi",
+                pl: "Informacje o Wi-Fi",
+                uk: "Інформація про Wi-Fi",
+                "zh-cn": "无线网络信息",
+            },
+            forceIndex: true,
+        });
+        if (cleanup.length < this.wifi.length) {
+            const obj = await this.loadChannels(sn, `profile.wifi.`, true);
+            const obj_wifi = Object.keys(obj).length;
+            const new_wifi = Object.keys(cleanup).length;
+            let count = obj_wifi;
+            let save = 0;
+            for (let a = new_wifi; a <= obj_wifi - 1; a++) {
+                this.log.info(`Delete wifi: ${this.namespace}.${sn}.profile.wifi.${`0${count}`.slice(-2)}`);
+                await this.delObjectAsync(`${this.namespace}.${sn}.profile.wifi.${`0${count}`.slice(-2)}`, {
+                    recursive: true,
+                });
+                this.json2iob.resetCache(`${sn}.profile.wifi.${`0${count}`.slice(-2)}`);
+                --count;
+                ++save;
+                if (save > 10) {
+                    break;
+                }
+            }
+        } else {
+            this.wifi = cleanup;
+        }
+        // ToDo Check and delete wifi 01/02/03
     }
 
     async onSunseekerDevicesList({ devices }) {
@@ -3545,17 +3645,14 @@ class SunseekerAdapter extends utils.Adapter {
                         let save = 0;
                         for (let a = pattern; a <= patterns - 1; a++) {
                             this.log.info(
-                                `Delete pattern: ${this.namespace}.${sn}.map.pattern.${`0${patterns}`.slice(-2)}`,
+                                `Delete pattern: ${this.namespace}.${sn}.map.pattern.${`0${count}`.slice(-2)}`,
                             );
-                            await this.delObjectAsync(
-                                `${this.namespace}.${sn}.map.pattern.${`0${patterns}`.slice(-2)}`,
-                                {
-                                    recursive: true,
-                                },
-                            );
-                            this.json2iob.resetCache(`${sn}.map.pattern.0${count}`);
-                            if (this.createObjectDone[`${sn}.map.pattern.0${count}`]) {
-                                delete this.createObjectDone[`${sn}.map.pattern.0${count}`];
+                            await this.delObjectAsync(`${this.namespace}.${sn}.map.pattern.${`0${count}`.slice(-2)}`, {
+                                recursive: true,
+                            });
+                            this.json2iob.resetCache(`${sn}.map.pattern.${`0${count}`.slice(-2)}`);
+                            if (this.createObjectDone[`${sn}.map.pattern.${`0${count}`.slice(-2)}`]) {
+                                delete this.createObjectDone[`${sn}.map.pattern.${`0${count}`.slice(-2)}`];
                             }
                             --count;
                             ++save;
@@ -3957,6 +4054,12 @@ class SunseekerAdapter extends utils.Adapter {
         ) {
             this.sunseeker.ownRequest(parts[ownIdx - 1], state.val);
             this.setState(id, { val: state.val, ack: true });
+            return;
+        }
+        const profileIdx = parts.indexOf("profile");
+        if (profileIdx > 0 && parts[profileIdx + 2]) {
+            const snDev = parts[profileIdx - 1];
+            this.profileHandler(id, snDev, state);
             return;
         }
         const scheduleIdx = parts.indexOf("schedule");
@@ -4629,6 +4732,304 @@ class SunseekerAdapter extends utils.Adapter {
                 this.setState(id, { val: state.val, ack: true });
             }
             return;
+        }
+    }
+
+    /**
+     * @param {string} id
+     * @param {string} sn
+     * @param {ioBroker.State} state
+     */
+    async profileHandler(id, sn, state) {
+        if (!this.sunseeker) {
+            return;
+        }
+        const parts = id.split(".");
+        const command = parts.pop();
+        const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,20}$/;
+        let text = "";
+        let path = "";
+        if (command === "step1_oldPassword") {
+            if (this.config.password != state.val) {
+                text = "The old password is incorrect.";
+                path = "password.step4_message";
+            } else {
+                text = "OK";
+                await this.setState(id, { val: state.val, ack: true });
+            }
+        } else if (command === "step2_newPassword") {
+            path = "password.step4_message";
+            if (typeof state.val === "string") {
+                if (!regex.test(state.val)) {
+                    text =
+                        "The password must have minimum eight characters, maximum twenty characters," +
+                        " at least one uppercase letter, one lowercase letter and one number.";
+                } else {
+                    text = "OK";
+                    await this.setState(id, { val: state.val, ack: true });
+                }
+            } else {
+                text = "The old password is not a character string.";
+            }
+        } else if (command === "step3_newPassword_repeat") {
+            const oldPw = await this.getStateAsync(`profile.password.step1_oldPassword`);
+            if (
+                !oldPw ||
+                !oldPw.val ||
+                typeof state.val !== "string" ||
+                oldPw.val != state.val ||
+                !regex.test(state.val)
+            ) {
+                text = "The password does not match.";
+            } else if (oldPw.val === state.val) {
+                const status = await this.sunseeker.changePassword(oldPw.val, state.val);
+                if (status) {
+                    await this.setState(id, { val: false, ack: true });
+                    await this.setState(`profile.password.step1_oldPassword`, { val: "", ack: true });
+                    await this.setState(`profile.password.step2_newPassword`, { val: "", ack: true });
+                    await this.setState(`profile.password.step3_newPassword_repeat`, { val: "", ack: true });
+                    this.sunseeker.stop();
+                    this.log.info(`Please change the password in the instance settings.`);
+                    text = "The password has been changed. Please change the password in the instance settings.";
+                } else {
+                    text = "Password was not changed!";
+                }
+            } else {
+                text = "Unknown error.";
+            }
+        } else if (command === "step1_newEmail") {
+            this.changeMail = {
+                appType: 3,
+                appVersion: "",
+                code: "",
+                newUserName: "",
+                operatingSystemCode: "android",
+                randomStr: "",
+            };
+            path = "mail.step7_message";
+            if (typeof state.val === "string") {
+                if (this.config.username === state.val) {
+                    text = "This is the email from the adapter settings.";
+                } else if (!this.isValidSyntax(state.val)) {
+                    text = "Email is invalid.";
+                } else {
+                    this.changeMail.newUserName = state.val;
+                    await this.setState(id, { val: state.val, ack: true });
+                    text = "OK";
+                }
+            } else {
+                text = "The email is not a character string.";
+            }
+        } else if (command === "step2_checkNewEmail") {
+            const mail = await this.getStateAsync(`profile.mail.step1_newEmail`);
+            if (!mail || !mail.val || mail.val != this.changeMail.newUserName || mail.val == "") {
+                this.changeMail.newUserName = "";
+                this.changeMail.randomStr = "";
+                await this.setState(`profile.mail.step3_randomString`, { val: "", ack: true });
+                await this.setState(`profile.mail.step1_newEmail`, { val: "", ack: true });
+                text = "The email has been changed!";
+            } else if (typeof this.changeMail.newUserName === "string" && this.changeMail.newUserName != "") {
+                const status = await this.sunseeker.checkEmail(this.changeMail.newUserName);
+                if (status) {
+                    const uuid = this.sunseeker.uuidv4();
+                    this.changeMail.randomStr = uuid;
+                    await this.setState(`profile.mail.step3_randomString`, { val: uuid, ack: true });
+                    await this.setState(`profile.mail.step2_checkNewEmail`, { val: false, ack: true });
+                    text = "OK";
+                } else {
+                    text = "This email is already in use.!";
+                }
+            } else {
+                this.changeMail.newUserName = "";
+                this.changeMail.randomStr = "";
+                text = "Unknown error!";
+            }
+        } else if (command === "step4_createVerificationCode") {
+            const mail = await this.getStateAsync(`profile.mail.step1_newEmail`);
+            const random = await this.getStateAsync(`profile.mail.step3_randomString`);
+            if (
+                !mail ||
+                !mail.val ||
+                mail.val != this.changeMail.newUserName ||
+                mail.val == "" ||
+                !random ||
+                !random.val ||
+                random.val != this.changeMail.randomStr ||
+                random.val == ""
+            ) {
+                this.changeMail.newUserName = "";
+                this.changeMail.randomStr = "";
+                await this.setState(`profile.mail.step3_randomString`, { val: "", ack: true });
+                await this.setState(`profile.mail.step1_newEmail`, { val: "", ack: true });
+                text = "The email or random string has been changed!";
+            } else if (
+                typeof this.changeMail.newUserName === "string" &&
+                this.changeMail.newUserName != "" &&
+                typeof this.changeMail.randomStr === "string" &&
+                this.changeMail.randomStr != ""
+            ) {
+                const status = await this.sunseeker.createVerifyCode(
+                    this.changeMail.newUserName,
+                    this.changeMail.randomStr,
+                );
+                if (status) {
+                    await this.setState(`profile.mail.step4_createVerificationCode`, { val: false, ack: true });
+                    text = "OK";
+                } else {
+                    text = "Unknown error! The code was not sent!";
+                }
+            } else {
+                this.changeMail.newUserName = "";
+                this.changeMail.randomStr = "";
+                text = "Unknown error.";
+            }
+        } else if (command === "step5_verificationCode") {
+            if (state && typeof state.val === "string" && state.val.length === 4) {
+                this.changeMail.code = state.val;
+                text = "OK";
+                await this.setState(`profile.mail.step5_verificationCode`, { val: state.val, ack: true });
+            } else {
+                text = "The code may only have four characters";
+            }
+        } else if (command === "step6_changeEmail") {
+            const mail = await this.getStateAsync(`profile.mail.step1_newEmail`);
+            const random = await this.getStateAsync(`profile.mail.step3_randomString`);
+            const code = await this.getStateAsync(`profile.mail.step5_verificationCode`);
+            if (
+                !mail ||
+                !mail.val ||
+                mail.val != this.changeMail.newUserName ||
+                mail.val == "" ||
+                !random ||
+                !random.val ||
+                random.val != this.changeMail.randomStr ||
+                random.val == "" ||
+                !code ||
+                !code.val ||
+                code.val != this.changeMail.code ||
+                code.val == ""
+            ) {
+                this.changeMail.newUserName = "";
+                this.changeMail.randomStr = "";
+                this.changeMail.code = "";
+                await this.setState(`profile.mail.step3_randomString`, { val: "", ack: true });
+                await this.setState(`profile.mail.step1_newEmail`, { val: "", ack: true });
+                await this.setState(`profile.mail.step5_verificationCode`, { val: "", ack: true });
+                text = "The email, random string or code has been changed!";
+            } else if (
+                typeof this.changeMail.newUserName === "string" &&
+                this.changeMail.newUserName != "" &&
+                typeof this.changeMail.randomStr === "string" &&
+                this.changeMail.randomStr != "" &&
+                typeof this.changeMail.code === "string" &&
+                this.changeMail.code != ""
+            ) {
+                const status = await this.sunseeker.changeEmail(this.changeMail);
+                if (status) {
+                    await this.setState(`profile.mail.step6_changeEmail`, { val: false, ack: true });
+                    await this.setState(`profile.mail.step3_randomString`, { val: "", ack: true });
+                    await this.setState(`profile.mail.step1_newEmail`, { val: "", ack: true });
+                    await this.setState(`profile.mail.step5_verificationCode`, { val: "", ack: true });
+                    text =
+                        "The email address has been changed. Please enter the new email address into the adapter settings.";
+                } else {
+                    text = "The email was not changed!";
+                }
+            } else {
+                this.changeMail.newUserName = "";
+                this.changeMail.randomStr = "";
+                this.changeMail.code = "";
+                text = "Unknown error.";
+            }
+        } else if (
+            command === "daylight_time_auto_set" ||
+            command === "daylight_time_enable" ||
+            command === "changeTimezone"
+        ) {
+            // ToDo Use meta
+            const lat = await this.getStateAsync(`${sn}.mower_raw.lat`);
+            const lng = await this.getStateAsync(`${sn}.mower_raw.lng`);
+            if (!lat || lat.val == null || typeof lat.val !== "number") {
+                this.log.warn(`Missing latitude`);
+                return;
+            }
+            if (!lng || lng.val == null || typeof lng.val !== "number") {
+                this.log.warn(`Missing longitude`);
+                return;
+            }
+            const timezone = this.sunseeker.getGmtOffset(lat.val, lng.val);
+            if (!timezone) {
+                this.log.warn(`Missing time zone data`);
+                return;
+            }
+            const addValue = {
+                daylight_time_auto_set: false,
+                daylight_time_enable: false,
+                timeZoneCode: timezone.gmtShort,
+                timeZoneId: timezone.tz,
+            };
+            const idSet = "updateTimezone";
+            const key = "time_zone";
+            const gmt = this.sunseeker.timezoneValue();
+            const timezoneCode = this.sunseeker.timezoneCode();
+            if (!gmt || gmt[timezone.gmtShort] == null) {
+                this.log.warn(`Missing gmt data`);
+                return;
+            }
+            let value = gmt[timezone.gmtShort];
+            if (command === "daylight_time_auto_set") {
+                addValue.daylight_time_auto_set = typeof state.val === "boolean" ? state.val : false;
+                const enable = await this.getStateAsync(`${sn}.profile.timezone.daylight_time_enable`);
+                if (enable && typeof enable.val === "boolean") {
+                    addValue.daylight_time_enable = enable.val;
+                }
+                const status = await this.sunseeker.setSettings(sn, value, idSet, key, addValue);
+                if (status) {
+                    await this.setState(id, { val: state.val, ack: true });
+                }
+            } else if (command === "daylight_time_enable") {
+                addValue.daylight_time_enable = typeof state.val === "boolean" ? state.val : false;
+                const auto = await this.getStateAsync(`${sn}.profile.timezone.daylight_time_auto_set`);
+                if (auto && typeof auto.val === "boolean") {
+                    addValue.daylight_time_auto_set = auto.val;
+                }
+                const status = await this.sunseeker.setSettings(sn, value, idSet, key, addValue);
+                if (status) {
+                    await this.setState(id, { val: state.val, ack: true });
+                }
+            } else if (command === "changeTimezone") {
+                if (state && typeof state.val === "string") {
+                    const tzCode = timezoneCode[state.val];
+                    const gmtCode = tzCode.split(" ");
+                    value = gmt[gmtCode[1]];
+                    addValue.timeZoneId = state.val;
+                    const status = await this.sunseeker.setSettings(sn, value, idSet, key, addValue);
+                    if (status) {
+                        await this.setState(id, { val: state.val, ack: true });
+                    }
+                }
+            }
+            return;
+        } else if (command === "country") {
+            if (state && typeof state.val === "string") {
+                const country = this.sunseeker.getRegionISO();
+                if (country[state.val]) {
+                    const status = await this.sunseeker.setCountry(state.val);
+                    if (status) {
+                        await this.setState(id, { val: state.val, ack: true });
+                    } else {
+                        this.log.warn(`Unknown error!`);
+                    }
+                } else {
+                    this.log.warn(`Wrong value type`);
+                }
+            } else {
+                this.log.warn(`Wrong country ${state.val}`);
+            }
+            return;
+        }
+        if (text != "") {
+            await this.setState(`${sn}.profile.${path}`, { val: text, ack: true, expire: 60000 });
         }
     }
 
@@ -6436,6 +6837,15 @@ class SunseekerAdapter extends utils.Adapter {
                 };
                 await this.sunseeker.createDataPoint(`${this.namespace}.${path}`, common, "state", null, null, null);
             }
+        }
+    }
+
+    /**
+     * @param {any} data
+     */
+    async onSunseekerAppInfo(data) {
+        if (typeof data.isoCode === "string" && this.createObjectDone[`profile.country.country`]) {
+            await this.setState(`profile.country.country`, { val: data.isoCode, ack: true });
         }
     }
 

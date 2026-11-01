@@ -28,6 +28,20 @@ interface Timers {
     delay: (ms: number) => Promise<void>;
 }
 
+interface Mail {
+    appType: number;
+    appVersion: string;
+    code: string;
+    newUserName: string;
+    operatingSystemCode: string;
+    randomStr: string;
+}
+
+interface GMT {
+    tz: string;
+    gmt: string;
+    gmtShort: string;
+}
 declare class Sunseeker extends EventEmitter {
     constructor(username: string, password: string, options?: SunseekerOptions, iob: ioBroker.Adapter | null);
 
@@ -84,6 +98,13 @@ declare class Sunseeker extends EventEmitter {
     ownRequest(sn: string, data: any): Promise<void>;
     requestLimitCheck(method: string | undefined | null, urlPath: string | undefined | null, data: any): Promise<void>;
     getImages(url: string): Promise<void>;
+    changePassword(oldPw: string, newPw: string): Promise<boolean>;
+    checkEmail(mail: string): Promise<boolean>;
+    uuidv4(): string;
+    createVerifyCode(mail: string, random: string): Promise<boolean>;
+    changeEmail(data: Mail): Promise<boolean>;
+    getGmtOffset(latitude: number, longitude: number): GMT | null;
+    setCountry(data: string): Promise<boolean>;
 
     // devices.js
     loadEventCodes(language: string): void;
@@ -150,6 +171,7 @@ declare class Sunseeker extends EventEmitter {
     getSharingUser(sn: string, id: string): Promise<boolean>;
     checkAppUpdate(type: string, version: string): Promise<boolean>;
     deleteMessages(ids: string[]): Promise<boolean>;
+    setProfile(sn: string): Promise<boolean>;
 
     // mqttV1.js
     connectMqttV1(): void;
@@ -213,6 +235,11 @@ declare class Sunseeker extends EventEmitter {
     addSharing(sn: string): Promise<any>;
     updateShareApplyInvite(sn: string, states: any, extend: boolean | null): Promise<void>;
     addTopUp(sn: string, isAvailable: any): Promise<void>;
+    ensureProfileStates(): Promise<void>;
+    ensureProfileStatesSN(sn: string): Promise<void>;
+    timezoneValue(): any;
+    timezoneCode(): any;
+    getRegionISO(): any;
 }
 
 export = Sunseeker;
