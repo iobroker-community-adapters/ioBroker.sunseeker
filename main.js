@@ -164,6 +164,7 @@ class SunseekerAdapter extends utils.Adapter {
         await this.sessionCheck();
 
         await this.sessionCheckMqtt();
+
         if (typeof this.config.mqtt_pw === "string" && this.config.mqtt_pw.length > 10) {
             //ToDo Check how long is the password valid?
             this.log.debug(`Use old Mqtt PW!`);
@@ -253,7 +254,6 @@ class SunseekerAdapter extends utils.Adapter {
             return;
         }
         this.setState("info.connection", true, true);
-
         try {
             await this.sunseeker.updateAllDevices(false);
         } catch (err) {
@@ -271,7 +271,8 @@ class SunseekerAdapter extends utils.Adapter {
                 mqtt.val != null &&
                 typeof mqtt.val === "string" &&
                 mqtt.val.startsWith("{") &&
-                mqtt.val != ""
+                mqtt.val != "" &&
+                mqtt.val.length > 10
             ) {
                 try {
                     const val = JSON.parse(mqtt.val);
@@ -294,7 +295,8 @@ class SunseekerAdapter extends utils.Adapter {
                 check_key.val != null &&
                 typeof check_key.val === "string" &&
                 check_key.val.startsWith("{") &&
-                check_key.val != ""
+                check_key.val != "" &&
+                check_key.val.length > 10
             ) {
                 try {
                     const val = JSON.parse(check_key.val);
@@ -754,7 +756,6 @@ class SunseekerAdapter extends utils.Adapter {
         } else {
             this.wifi = cleanup;
         }
-        // ToDo Check and delete wifi 01/02/03
     }
 
     async onSunseekerDevicesList({ devices }) {
