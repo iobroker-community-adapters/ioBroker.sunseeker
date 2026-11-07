@@ -1,432 +1,424 @@
 {
-  "common": {
-    "name": "sunseeker",
-    "version": "0.0.5",
-    "news": {
-      "0.0.5": {
-        "en": "MQTT reconnected fixed",
-        "de": "MQTT neu verbunden",
-        "ru": "MQTT снова подключен (исправлено)",
-        "pt": "MQTT reconectado fixo",
-        "nl": "MQTT heeft opnieuw verbinding gemaakt, opgelost",
-        "fr": "MQTT reconnecté fixe",
-        "it": "MQTT ricollegato fisso",
-        "es": "MQTT reconectado fijo",
-        "pl": "MQTT ponownie podłączony stały",
-        "uk": "Виправлено повторне підключення MQTT",
-        "zh-cn": "MQTT 重新连接已修复"
-      },
-      "0.0.4": {
-        "en": "Added account sharing\nAdded device sorting",
-        "de": "Accountsharing hinzugefügt\nGerätesortierung hinzugefügt",
-        "ru": "Добавлен общий доступ к аккаунту\nДобавлена сортировка устройств",
-        "pt": "Mais contas compartilhadas\nAdição de itens",
-        "nl": "Delen van accounts toegevoegd\nSortering van apparaten toegevoegd",
-        "fr": "Partage de compte ajouté\nTri des appareils ajouté",
-        "it": "Aggiunto account\nAggiunto ordine",
-        "es": "Añadió compartir cuentas\nAñadió el orden de dispositivos",
-        "pl": "Dodano udostępnianie konta\nDodano sortowanie urządzeń",
-        "uk": "Додано спільний доступ до облікового запису\nДодано сортування пристроїв",
-        "zh-cn": "添加了账号共享\n增加了设备排序功能"
-      },
-      "0.0.3": {
-        "en": "Settings added\nRefresh properties button added\nMulti-angle added\nCustom Multi-angle added\nMirroring of App version 1.7.0 regarding login, header, and MQTT password.\nPattern, anti-theft added",
-        "de": "Neue Einstellungen\nNeues Eigenschaften-Menü\nMehrwinkel hinzugefügt\nCustom Multiangle hinzugefügt\nSpiegeln von App Version 1.7.0 mit Login, Header und MQTT-Passwort.\nMuster, Diebstahlschutz hinzugefügt",
-        "ru": "Добавлены настройки\nДобавлена кнопка «Обновить свойства»\nДобавлен многоугольник\nДобавлен пользовательский многоугольник\nЗеркальное отображение версии приложения 1.7.0 с точки зрения логина, заголовка и пароля MQTT.\nУзор, добавлена защита от кражи",
-        "pt": "Ajustes adicionados\nBotão Atualizar propriedades\nAdição de vários ângulos\nAdição de vários ângulos\nEspelhamento do App versão 1.7.0 em relação a login, cabeçalho e senha MQTT.\nPadrão, antifurto adicionado",
-        "nl": "Instellingen toegevoegd\nKnop Eigenschappen vernieuwen toegevoegd\nMeerdere hoeken toegevoegd\nCustom Multiangle toegevoegd\nMirroring van app-versie 1.7.0 met betrekking tot login, koptekst en MQTT-wachtwoord.\nPatroon, antidiefstal toegevoegd",
-        "fr": "Réglages ajoutés\nBouton Actualiser les propriétés ajouté\nMultiangle ajouté\nAjout d'un angle personnalisé\nReproduction de l'App 1.7.0 concernant le login, l'en-tête et le mot de passe MQTT.\nMotif, antivol ajouté",
-        "it": "Parametri aggiunti\nAggiunto il pulsante Aggiorna\nMultiangolo aggiunto\nMultiangolo aggiunto\nMirroring dell'App versione 1.7.0 con login, header e password MQTT.\nSchema, antifurto aggiunto",
-        "es": "Ajustes añadidos\nBotón Actualizar propiedades añadido\nAñadido multiángulo\nAñadido multiángulo personalizado\nReflejo de la versión 1.7.0 de la App en cuanto a inicio de sesión, encabezado y contraseña MQTT.\nPatrón, antirrobo añadido",
-        "pl": "Dodano ustawienia\nDodano przycisk Odśwież właściwości\nDodano wiele kątów\nDodano niestandardowy wielokątny\nTworzenie kopii lustrzanych aplikacji w wersji 1.7.0 w odniesieniu do loginu, nagłówka i hasła MQTT.\nDodano wzór, antykradzieżowy",
-        "uk": "Налаштування додано\nДодана кнопка оновлення властивостей\nДодано багатокутний\nКористувальницький Багатокутний доданий\nДзеркальне відображення версії програми 1.7.0 щодо входу, заголовка та пароля MQTT.\nВізерунок, доданий захист від крадіжки",
-        "zh-cn": "已添加设置\n添加了 “刷新属性” 按钮\n添加了多角度\n添加了自定义多角度\n应用程序版本 1.7.0 中有关登录、标头和 MQTT 密码的镜像。\n图案，已添加防盗功能"
-      },
-      "0.0.2": {
-        "en": "Adapter requires admin >= 7.8.23 now.\nAdded event log",
-        "de": "Adapter benötigt admin >= 7.8.23 jetzt.\nZusätzliches Ereignisprotokoll",
-        "ru": "Адаптер требует администратора >= 7.8.23.\nДобавлен журнал событий",
-        "pt": "Adaptador requer administrador >= 7.8.23 agora.\nRegisto de eventos adicionado",
-        "nl": "Voor adapter is admin < 7.8.23 nodig.\nActielogboek toegevoegd",
-        "fr": "Adaptateur nécessite admin >= 7.8.23 maintenant.\nAjout du journal des événements",
-        "it": "L'adattatore richiede ora admin >= 7.8.23.\nRegistro eventi aggiunto",
-        "es": "El adaptador requiere admin= 7.8.23 ahora.\nRegistro del evento",
-        "pl": "Adapter wymaga admin > = 7.8.23 teraz.\nDodano dziennik zdarzeń",
-        "uk": "Адаптер вимагає адміністратора >= 7.8.23 тепер.\nДодано журнал подій",
-        "zh-cn": "适配器需要管理员 \\ 7.8.23现在.\n添加事件日志"
-      },
-      "0.0.1": {
-        "en": "initial release",
-        "de": "Erstveröffentlichung",
-        "ru": "Начальная версия",
-        "pt": "lançamento inicial",
-        "nl": "Eerste uitgave",
-        "fr": "Première version",
-        "it": "Versione iniziale",
-        "es": "Versión inicial",
-        "pl": "Pierwsze wydanie",
-        "uk": "Початкова версія",
-        "zh-cn": "首次出版"
-      }
-    },
-    "titleLang": {
-      "en": "Sunseeker Mower",
-      "de": "Sunseeker-Mäher",
-      "ru": "Сансикер Косилка",
-      "pt": "Cortador Sunseeker",
-      "nl": "Sunseeker-maaier",
-      "fr": "Tondeuse Sunseeker",
-      "it": "Rasaerba Sunseeker",
-      "es": "Cortacésped Sunseeker",
-      "pl": "Kosiarka Sunseeker",
-      "uk": "Косарка Sunseeker",
-      "zh-cn": "圣汐割草机"
-    },
-    "desc": {
-      "en": "Sunseeker Mower Adapter",
-      "de": "Sunseeker Rasenmäher-Adapter",
-      "ru": "Адаптер для газонокосилки Sunseeker",
-      "pt": "Adaptador de cortador Sunseeker",
-      "nl": "Sunseeker-maaieradapter",
-      "fr": "Adaptateur pour tondeuse Sunseeker",
-      "it": "Adattatore per tosaerba Sunseeker",
-      "es": "Adaptador para cortacésped Sunseeker",
-      "pl": "Adapter do kosiarki Sunseeker",
-      "uk": "Адаптер косарки Sunseeker",
-      "zh-cn": "Sunseeker 割草机适配器"
-    },
-    "authors": [
-      "TA2k <tombox2020@gmail.com>",
-      "iobroker-community-adapters <iobroker-community-adapters@gmx.de>"
-    ],
-    "keywords": [
-      "sunseeker",
-      "adano",
-      "brücke"
-    ],
-    "licenseInformation": {
-      "type": "free",
-      "license": "MIT"
-    },
-    "platform": "Javascript/Node.js",
-    "icon": "sunseeker.png",
-    "enabled": true,
-    "extIcon": "https://raw.githubusercontent.com/iobroker-community-adapters/ioBroker.sunseeker/main/admin/sunseeker.png",
-    "readme": "https://github.com/iobroker-community-adapters/ioBroker.sunseeker/blob/main/README.md",
-    "loglevel": "info",
-    "tier": 3,
-    "mode": "daemon",
-    "type": "garden",
-    "messagebox": true,
-    "compact": true,
-    "connectionType": "cloud",
-    "dataSource": "poll",
-    "docs": {
-      "en": "docs/en/README.md",
-      "de": "docs/de/README.md"
-    },
-    "adminUI": {
-      "config": "json"
-    },
-    "dependencies": [
-      {
-        "js-controller": ">=6.0.11"
-      }
-    ],
-    "globalDependencies": [
-      {
-        "admin": ">=7.8.23"
-      }
-    ]
-  },
-  "native": {
-    "username": "",
-    "password": "",
-    "region": "EU",
-    "apptype": "New",
-    "interval": 720,
-    "ratelimit": 6000,
-    "restartlimit": 10,
-    "errorlimit": 10,
-    "language": "de-DE",
-    "session": {},
-    "mqtt_pw": "",
-    "request": {
-      "requestCount": 0,
-      "requestLast": 0,
-      "requestTime": "",
-      "requestBlock": false,
-      "day": "01-01",
-      "request": []
-    }
-  },
-  "encryptedNative": [
-    "password"
-  ],
-  "protectedNative": [
-    "password"
-  ],
-  "objects": [],
-  "instanceObjects": [
-    {
-      "_id": "",
-      "type": "meta",
-      "common": {
-        "name": {
-          "en": "Meta storage for user files",
-          "de": "Metadatenspeicher für Benutzerdateien",
-          "ru": "Мета-хранилище для пользовательских файлов",
-          "pt": "Armazenamento de metadados para arquivos de usuário",
-          "nl": "Meta-opslag voor gebruikersbestanden",
-          "fr": "Métadonnées de stockage pour les fichiers utilisateur",
-          "it": "Metastored per i file utente",
-          "es": "Almacenamiento meta para archivos de usuario",
-          "pl": "Meta-magazyn dla plików użytkownika",
-          "uk": "Мета-сховище для файлів користувачів",
-          "zh-cn": "用户文件的元数据存储"
+    "common": {
+        "name": "sunseeker",
+        "version": "0.0.5",
+        "news": {
+            "0.0.5": {
+                "en": "MQTT reconnected fixed",
+                "de": "MQTT neu verbunden",
+                "ru": "MQTT снова подключен (исправлено)",
+                "pt": "MQTT reconectado fixo",
+                "nl": "MQTT heeft opnieuw verbinding gemaakt, opgelost",
+                "fr": "MQTT reconnecté fixe",
+                "it": "MQTT ricollegato fisso",
+                "es": "MQTT reconectado fijo",
+                "pl": "MQTT ponownie podłączony stały",
+                "uk": "Виправлено повторне підключення MQTT",
+                "zh-cn": "MQTT 重新连接已修复"
+            },
+            "0.0.4": {
+                "en": "Added account sharing\nAdded device sorting",
+                "de": "Accountsharing hinzugefügt\nGerätesortierung hinzugefügt",
+                "ru": "Добавлен общий доступ к аккаунту\nДобавлена сортировка устройств",
+                "pt": "Mais contas compartilhadas\nAdição de itens",
+                "nl": "Delen van accounts toegevoegd\nSortering van apparaten toegevoegd",
+                "fr": "Partage de compte ajouté\nTri des appareils ajouté",
+                "it": "Aggiunto account\nAggiunto ordine",
+                "es": "Añadió compartir cuentas\nAñadió el orden de dispositivos",
+                "pl": "Dodano udostępnianie konta\nDodano sortowanie urządzeń",
+                "uk": "Додано спільний доступ до облікового запису\nДодано сортування пристроїв",
+                "zh-cn": "添加了账号共享\n增加了设备排序功能"
+            },
+            "0.0.3": {
+                "en": "Settings added\nRefresh properties button added\nMulti-angle added\nCustom Multi-angle added\nMirroring of App version 1.7.0 regarding login, header, and MQTT password.\nPattern, anti-theft added",
+                "de": "Neue Einstellungen\nNeues Eigenschaften-Menü\nMehrwinkel hinzugefügt\nCustom Multiangle hinzugefügt\nSpiegeln von App Version 1.7.0 mit Login, Header und MQTT-Passwort.\nMuster, Diebstahlschutz hinzugefügt",
+                "ru": "Добавлены настройки\nДобавлена кнопка «Обновить свойства»\nДобавлен многоугольник\nДобавлен пользовательский многоугольник\nЗеркальное отображение версии приложения 1.7.0 с точки зрения логина, заголовка и пароля MQTT.\nУзор, добавлена защита от кражи",
+                "pt": "Ajustes adicionados\nBotão Atualizar propriedades\nAdição de vários ângulos\nAdição de vários ângulos\nEspelhamento do App versão 1.7.0 em relação a login, cabeçalho e senha MQTT.\nPadrão, antifurto adicionado",
+                "nl": "Instellingen toegevoegd\nKnop Eigenschappen vernieuwen toegevoegd\nMeerdere hoeken toegevoegd\nCustom Multiangle toegevoegd\nMirroring van app-versie 1.7.0 met betrekking tot login, koptekst en MQTT-wachtwoord.\nPatroon, antidiefstal toegevoegd",
+                "fr": "Réglages ajoutés\nBouton Actualiser les propriétés ajouté\nMultiangle ajouté\nAjout d'un angle personnalisé\nReproduction de l'App 1.7.0 concernant le login, l'en-tête et le mot de passe MQTT.\nMotif, antivol ajouté",
+                "it": "Parametri aggiunti\nAggiunto il pulsante Aggiorna\nMultiangolo aggiunto\nMultiangolo aggiunto\nMirroring dell'App versione 1.7.0 con login, header e password MQTT.\nSchema, antifurto aggiunto",
+                "es": "Ajustes añadidos\nBotón Actualizar propiedades añadido\nAñadido multiángulo\nAñadido multiángulo personalizado\nReflejo de la versión 1.7.0 de la App en cuanto a inicio de sesión, encabezado y contraseña MQTT.\nPatrón, antirrobo añadido",
+                "pl": "Dodano ustawienia\nDodano przycisk Odśwież właściwości\nDodano wiele kątów\nDodano niestandardowy wielokątny\nTworzenie kopii lustrzanych aplikacji w wersji 1.7.0 w odniesieniu do loginu, nagłówka i hasła MQTT.\nDodano wzór, antykradzieżowy",
+                "uk": "Налаштування додано\nДодана кнопка оновлення властивостей\nДодано багатокутний\nКористувальницький Багатокутний доданий\nДзеркальне відображення версії програми 1.7.0 щодо входу, заголовка та пароля MQTT.\nВізерунок, доданий захист від крадіжки",
+                "zh-cn": "已添加设置\n添加了 “刷新属性” 按钮\n添加了多角度\n添加了自定义多角度\n应用程序版本 1.7.0 中有关登录、标头和 MQTT 密码的镜像。\n图案，已添加防盗功能"
+            },
+            "0.0.2": {
+                "en": "Adapter requires admin >= 7.8.23 now.\nAdded event log",
+                "de": "Adapter benötigt admin >= 7.8.23 jetzt.\nZusätzliches Ereignisprotokoll",
+                "ru": "Адаптер требует администратора >= 7.8.23.\nДобавлен журнал событий",
+                "pt": "Adaptador requer administrador >= 7.8.23 agora.\nRegisto de eventos adicionado",
+                "nl": "Voor adapter is admin < 7.8.23 nodig.\nActielogboek toegevoegd",
+                "fr": "Adaptateur nécessite admin >= 7.8.23 maintenant.\nAjout du journal des événements",
+                "it": "L'adattatore richiede ora admin >= 7.8.23.\nRegistro eventi aggiunto",
+                "es": "El adaptador requiere admin= 7.8.23 ahora.\nRegistro del evento",
+                "pl": "Adapter wymaga admin > = 7.8.23 teraz.\nDodano dziennik zdarzeń",
+                "uk": "Адаптер вимагає адміністратора >= 7.8.23 тепер.\nДодано журнал подій",
+                "zh-cn": "适配器需要管理员 \\ 7.8.23现在.\n添加事件日志"
+            },
+            "0.0.1": {
+                "en": "initial release",
+                "de": "Erstveröffentlichung",
+                "ru": "Начальная версия",
+                "pt": "lançamento inicial",
+                "nl": "Eerste uitgave",
+                "fr": "Première version",
+                "it": "Versione iniziale",
+                "es": "Versión inicial",
+                "pl": "Pierwsze wydanie",
+                "uk": "Початкова версія",
+                "zh-cn": "首次出版"
+            }
         },
-        "type": "meta.user"
-      },
-      "native": {}
+        "titleLang": {
+            "en": "Sunseeker Mower",
+            "de": "Sunseeker-Mäher",
+            "ru": "Сансикер Косилка",
+            "pt": "Cortador Sunseeker",
+            "nl": "Sunseeker-maaier",
+            "fr": "Tondeuse Sunseeker",
+            "it": "Rasaerba Sunseeker",
+            "es": "Cortacésped Sunseeker",
+            "pl": "Kosiarka Sunseeker",
+            "uk": "Косарка Sunseeker",
+            "zh-cn": "圣汐割草机"
+        },
+        "desc": {
+            "en": "Sunseeker Mower Adapter",
+            "de": "Sunseeker Rasenmäher-Adapter",
+            "ru": "Адаптер для газонокосилки Sunseeker",
+            "pt": "Adaptador de cortador Sunseeker",
+            "nl": "Sunseeker-maaieradapter",
+            "fr": "Adaptateur pour tondeuse Sunseeker",
+            "it": "Adattatore per tosaerba Sunseeker",
+            "es": "Adaptador para cortacésped Sunseeker",
+            "pl": "Adapter do kosiarki Sunseeker",
+            "uk": "Адаптер косарки Sunseeker",
+            "zh-cn": "Sunseeker 割草机适配器"
+        },
+        "authors": ["TA2k <tombox2020@gmail.com>", "iobroker-community-adapters <iobroker-community-adapters@gmx.de>"],
+        "keywords": ["sunseeker", "adano", "brücke"],
+        "licenseInformation": {
+            "type": "free",
+            "license": "MIT"
+        },
+        "platform": "Javascript/Node.js",
+        "icon": "sunseeker.png",
+        "enabled": true,
+        "extIcon": "https://raw.githubusercontent.com/iobroker-community-adapters/ioBroker.sunseeker/main/admin/sunseeker.png",
+        "readme": "https://github.com/iobroker-community-adapters/ioBroker.sunseeker/blob/main/README.md",
+        "loglevel": "info",
+        "tier": 3,
+        "mode": "daemon",
+        "type": "garden",
+        "messagebox": true,
+        "compact": true,
+        "connectionType": "cloud",
+        "dataSource": "poll",
+        "docs": {
+            "en": "docs/en/README.md",
+            "de": "docs/de/README.md"
+        },
+        "adminUI": {
+            "config": "json"
+        },
+        "dependencies": [
+            {
+                "js-controller": ">=6.0.11"
+            }
+        ],
+        "globalDependencies": [
+            {
+                "admin": ">=7.8.23"
+            }
+        ]
     },
-    {
-      "_id": "info",
-      "type": "channel",
-      "common": {
-        "name": {
-          "en": "Information",
-          "de": "Informationen",
-          "ru": "Информация",
-          "pt": "Informaço",
-          "nl": "Informatie",
-          "fr": "Informations",
-          "it": "Dati",
-          "es": "Información",
-          "pl": "Informacja",
-          "uk": "Інформація",
-          "zh-cn": "信息"
+    "native": {
+        "username": "",
+        "password": "",
+        "region": "EU",
+        "apptype": "New",
+        "interval": 720,
+        "ratelimit": 6000,
+        "restartlimit": 10,
+        "errorlimit": 10,
+        "language": "de-DE",
+        "session": {},
+        "mqtt_pw": "",
+        "request": {
+            "requestCount": 0,
+            "requestLast": 0,
+            "requestTime": "",
+            "requestBlock": false,
+            "day": "01-01",
+            "request": []
         }
-      },
-      "native": {}
     },
-    {
-      "_id": "info.connection",
-      "type": "state",
-      "common": {
-        "role": "indicator.connected",
-        "name": {
-          "en": "Device or service connected",
-          "de": "Geräte- oder Serviceverbindung",
-          "ru": "Устройство или сервис подключены",
-          "pt": "Dispositivo ou serviço conectado",
-          "nl": "Device of dienst verbonden",
-          "fr": "Appareil ou service connecté",
-          "it": "Dispositivo o servizio collegato",
-          "es": "Dispositivo o servicio conectado",
-          "pl": "Urządzenie lub usługa połączona",
-          "uk": "Пристрої або послуги підключені",
-          "zh-cn": "证人或有关服务"
+    "encryptedNative": ["password"],
+    "protectedNative": ["password"],
+    "objects": [],
+    "instanceObjects": [
+        {
+            "_id": "",
+            "type": "meta",
+            "common": {
+                "name": {
+                    "en": "Meta storage for user files",
+                    "de": "Metadatenspeicher für Benutzerdateien",
+                    "ru": "Мета-хранилище для пользовательских файлов",
+                    "pt": "Armazenamento de metadados para arquivos de usuário",
+                    "nl": "Meta-opslag voor gebruikersbestanden",
+                    "fr": "Métadonnées de stockage pour les fichiers utilisateur",
+                    "it": "Metastored per i file utente",
+                    "es": "Almacenamiento meta para archivos de usuario",
+                    "pl": "Meta-magazyn dla plików użytkownika",
+                    "uk": "Мета-сховище для файлів користувачів",
+                    "zh-cn": "用户文件的元数据存储"
+                },
+                "type": "meta.user"
+            },
+            "native": {}
         },
-        "type": "boolean",
-        "read": true,
-        "write": false,
-        "def": false
-      },
-      "native": {}
-    },
-    {
-      "_id": "auth.mqtt_connected",
-      "type": "state",
-      "common": {
-        "role": "indicator.reachable",
-        "name": {
-          "en": "Mqtt Connection",
-          "de": "MQTT-Verbindung",
-          "ru": "Маттовое соединение",
-          "pt": "Conexão Matt",
-          "nl": "Mqtt-verbinding",
-          "fr": "Matt Connection",
-          "it": "Connessione Mqtt",
-          "es": "Conexión Mqtt",
-          "pl": "Połączenie Mqtt",
-          "uk": "Підключення Mqtt",
-          "zh-cn": "Mqtt 连接"
+        {
+            "_id": "info",
+            "type": "channel",
+            "common": {
+                "name": {
+                    "en": "Information",
+                    "de": "Informationen",
+                    "ru": "Информация",
+                    "pt": "Informaço",
+                    "nl": "Informatie",
+                    "fr": "Informations",
+                    "it": "Dati",
+                    "es": "Información",
+                    "pl": "Informacja",
+                    "uk": "Інформація",
+                    "zh-cn": "信息"
+                }
+            },
+            "native": {}
         },
-        "type": "boolean",
-        "read": true,
-        "write": false,
-        "def": false
-      },
-      "native": {}
-    },
-    {
-      "_id": "auth.mqtt_connected_V1",
-      "type": "state",
-      "common": {
-        "role": "indicator.reachable",
-        "name": {
-          "en": "Mqtt V1 Connection",
-          "de": "Mqtt V1 Verbindung",
-          "ru": "Подключение к Мэтту V1",
-          "pt": "Conexão Matt V1",
-          "nl": "Matt V1-verbinding",
-          "fr": "Connexion Matt V1",
-          "it": "Connessione Matt V1",
-          "es": "Conexión Mqtt V1",
-          "pl": "Połączenie Mqtt V1",
-          "uk": "Підключення Mqtt V1",
-          "zh-cn": "Mqtt V1 连接"
+        {
+            "_id": "info.connection",
+            "type": "state",
+            "common": {
+                "role": "indicator.connected",
+                "name": {
+                    "en": "Device or service connected",
+                    "de": "Geräte- oder Serviceverbindung",
+                    "ru": "Устройство или сервис подключены",
+                    "pt": "Dispositivo ou serviço conectado",
+                    "nl": "Device of dienst verbonden",
+                    "fr": "Appareil ou service connecté",
+                    "it": "Dispositivo o servizio collegato",
+                    "es": "Dispositivo o servicio conectado",
+                    "pl": "Urządzenie lub usługa połączona",
+                    "uk": "Пристрої або послуги підключені",
+                    "zh-cn": "证人或有关服务"
+                },
+                "type": "boolean",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
         },
-        "type": "boolean",
-        "read": true,
-        "write": false,
-        "def": false
-      },
-      "native": {}
-    },
-    {
-      "_id": "auth.mqtt_connected_old",
-      "type": "state",
-      "common": {
-        "role": "indicator.reachable",
-        "name": {
-          "en": "Mqtt Connection (wire device)",
-          "de": "MQTT Connection (Kabelgerät)",
-          "ru": "Подключение Matt (проводное устройство)",
-          "pt": "Conexão Matt (cabo)",
-          "nl": "Matt-verbinding (kabelapparaat)",
-          "fr": "Matt Connection (appareil filaire)",
-          "it": "Connessione Mqtt (cavo)",
-          "es": "Conexión Mqtt (cable)",
-          "pl": "Połączenie Mqtt (urządzenie przewodowe)",
-          "uk": "Підключення Mqtt (дротовий пристрій)",
-          "zh-cn": "Mqtt 连接（有线设备）"
+        {
+            "_id": "auth.mqtt_connected",
+            "type": "state",
+            "common": {
+                "role": "indicator.reachable",
+                "name": {
+                    "en": "Mqtt Connection",
+                    "de": "MQTT-Verbindung",
+                    "ru": "Маттовое соединение",
+                    "pt": "Conexão Matt",
+                    "nl": "Mqtt-verbinding",
+                    "fr": "Matt Connection",
+                    "it": "Connessione Mqtt",
+                    "es": "Conexión Mqtt",
+                    "pl": "Połączenie Mqtt",
+                    "uk": "Підключення Mqtt",
+                    "zh-cn": "Mqtt 连接"
+                },
+                "desc": "Create by Adapter",
+                "type": "boolean",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
         },
-        "type": "boolean",
-        "read": true,
-        "write": false,
-        "def": false
-      },
-      "native": {}
-    },
-    {
-      "_id": "auth",
-      "type": "channel",
-      "common": {
-        "name": {
-          "en": "Auth Information",
-          "de": "Authentifizierungsinformationen",
-          "ru": "Информация об аутентификации",
-          "pt": "Informações de autorização",
-          "nl": "Autorisatie-informatie",
-          "fr": "Informations d'autorisation",
-          "it": "Informazioni di autorizzazione",
-          "es": "Información de autorización",
-          "pl": "Informacje o uwierzytelnianiu",
-          "uk": "Інформація для авторизації",
-          "zh-cn": "授权信息"
+        {
+            "_id": "auth.mqtt_connected_V1",
+            "type": "state",
+            "common": {
+                "role": "indicator.reachable",
+                "name": {
+                    "en": "Mqtt V1 Connection",
+                    "de": "Mqtt V1 Verbindung",
+                    "ru": "Подключение к Мэтту V1",
+                    "pt": "Conexão Matt V1",
+                    "nl": "Matt V1-verbinding",
+                    "fr": "Connexion Matt V1",
+                    "it": "Connessione Matt V1",
+                    "es": "Conexión Mqtt V1",
+                    "pl": "Połączenie Mqtt V1",
+                    "uk": "Підключення Mqtt V1",
+                    "zh-cn": "Mqtt V1 连接"
+                },
+                "desc": "Create by Adapter",
+                "type": "boolean",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
         },
-        "desc": "Create by Adapter",
-        "icon": "img/auth.png"
-      },
-      "native": {}
-    },
-    {
-      "_id": "rateLimit",
-      "type": "channel",
-      "common": {
-        "name": {
-          "en": "Rate Limit",
-          "de": "Ratenbegrenzung",
-          "ru": "Лимит скорости",
-          "pt": "Limite de taxa",
-          "nl": "Snelheidslimiet",
-          "fr": "Limite de débit",
-          "it": "Limite di tariffa",
-          "es": "Límite de tasa",
-          "pl": "Limit szybkości",
-          "uk": "Ліміт швидкості",
-          "zh-cn": "速率限制"
+        {
+            "_id": "auth.mqtt_connected_old",
+            "type": "state",
+            "common": {
+                "role": "indicator.reachable",
+                "name": {
+                    "en": "Mqtt Connection (wire device)",
+                    "de": "MQTT Connection (Kabelgerät)",
+                    "ru": "Подключение Matt (проводное устройство)",
+                    "pt": "Conexão Matt (cabo)",
+                    "nl": "Matt-verbinding (kabelapparaat)",
+                    "fr": "Matt Connection (appareil filaire)",
+                    "it": "Connessione Mqtt (cavo)",
+                    "es": "Conexión Mqtt (cable)",
+                    "pl": "Połączenie Mqtt (urządzenie przewodowe)",
+                    "uk": "Підключення Mqtt (дротовий пристрій)",
+                    "zh-cn": "Mqtt 连接（有线设备）"
+                },
+                "desc": "Create by Adapter",
+                "type": "boolean",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
         },
-        "desc": "Create by Adapter",
-        "icon": "img/rate.png"
-      },
-      "native": {}
-    },
-    {
-      "_id": "auth.session",
-      "type": "state",
-      "common": {
-        "name": {
-          "en": "Session",
-          "de": "Sitzung",
-          "ru": "Сессия",
-          "pt": "Sessão",
-          "nl": "Sessie",
-          "fr": "Séance",
-          "it": "Seduta",
-          "es": "Sesión",
-          "pl": "Sesja",
-          "uk": "Сесія",
-          "zh-cn": "会话"
+        {
+            "_id": "auth",
+            "type": "channel",
+            "common": {
+                "name": {
+                    "en": "Auth Information",
+                    "de": "Authentifizierungsinformationen",
+                    "ru": "Информация об аутентификации",
+                    "pt": "Informações de autorização",
+                    "nl": "Autorisatie-informatie",
+                    "fr": "Informations d'autorisation",
+                    "it": "Informazioni di autorizzazione",
+                    "es": "Información de autorización",
+                    "pl": "Informacje o uwierzytelnianiu",
+                    "uk": "Інформація для авторизації",
+                    "zh-cn": "授权信息"
+                },
+                "desc": "Create by Adapter",
+                "icon": "img/auth.png"
+            },
+            "native": {}
         },
-        "type": "string",
-        "role": "json",
-        "desc": "Create by Adapter",
-        "read": true,
-        "write": false
-      },
-      "native": {}
-    },
-    {
-      "_id": "auth.mqtt_connection",
-      "type": "state",
-      "common": {
-        "name": {
-          "en": "Mqtt connection",
-          "de": "MQTT-Verbindung",
-          "ru": "MQTT-соединение",
-          "pt": "Conexão MQTT",
-          "nl": "MQTT-verbinding",
-          "fr": "Connexion MQTT",
-          "it": "Connessione MQTT",
-          "es": "conexión MQTT",
-          "pl": "Połączenie MQTT",
-          "uk": "З'єднання Mqtt",
-          "zh-cn": "MQTT 连接"
+        {
+            "_id": "rateLimit",
+            "type": "channel",
+            "common": {
+                "name": {
+                    "en": "Rate Limit",
+                    "de": "Ratenbegrenzung",
+                    "ru": "Лимит скорости",
+                    "pt": "Limite de taxa",
+                    "nl": "Snelheidslimiet",
+                    "fr": "Limite de débit",
+                    "it": "Limite di tariffa",
+                    "es": "Límite de tasa",
+                    "pl": "Limit szybkości",
+                    "uk": "Ліміт швидкості",
+                    "zh-cn": "速率限制"
+                },
+                "desc": "Create by Adapter",
+                "icon": "img/rate.png"
+            },
+            "native": {}
         },
-        "type": "string",
-        "role": "json",
-        "desc": "Create by Adapter",
-        "read": true,
-        "write": false
-      },
-      "native": {}
-    },
-    {
-      "_id": "rateLimit.restart",
-      "type": "state",
-      "common": {
-        "name": {
-          "en": "Restart Limit",
-          "de": "Neustartlimit",
-          "ru": "Ограничение перезапуска",
-          "pt": "Limite de reinicialização",
-          "nl": "Herstartlimiet",
-          "fr": "Limite de redémarrage",
-          "it": "Limite di riavvio",
-          "es": "Límite de reinicio",
-          "pl": "Limit ponownego uruchomienia",
-          "uk": "Ліміт перезапуску",
-          "zh-cn": "重启限制"
+        {
+            "_id": "auth.session",
+            "type": "state",
+            "common": {
+                "name": {
+                    "en": "Session",
+                    "de": "Sitzung",
+                    "ru": "Сессия",
+                    "pt": "Sessão",
+                    "nl": "Sessie",
+                    "fr": "Séance",
+                    "it": "Seduta",
+                    "es": "Sesión",
+                    "pl": "Sesja",
+                    "uk": "Сесія",
+                    "zh-cn": "会话"
+                },
+                "type": "string",
+                "role": "json",
+                "desc": "Create by Adapter",
+                "read": true,
+                "write": false
+            },
+            "native": {}
         },
-        "type": "string",
-        "role": "json",
-        "desc": "Create by Adapter",
-        "read": true,
-        "write": false
-      },
-      "native": {}
-    }
-  ]
+        {
+            "_id": "auth.mqtt_connection",
+            "type": "state",
+            "common": {
+                "name": {
+                    "en": "Mqtt connection",
+                    "de": "MQTT-Verbindung",
+                    "ru": "MQTT-соединение",
+                    "pt": "Conexão MQTT",
+                    "nl": "MQTT-verbinding",
+                    "fr": "Connexion MQTT",
+                    "it": "Connessione MQTT",
+                    "es": "conexión MQTT",
+                    "pl": "Połączenie MQTT",
+                    "uk": "З'єднання Mqtt",
+                    "zh-cn": "MQTT 连接"
+                },
+                "type": "string",
+                "role": "json",
+                "desc": "Create by Adapter",
+                "read": true,
+                "write": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "rateLimit.restart",
+            "type": "state",
+            "common": {
+                "name": {
+                    "en": "Restart Limit",
+                    "de": "Neustartlimit",
+                    "ru": "Ограничение перезапуска",
+                    "pt": "Limite de reinicialização",
+                    "nl": "Herstartlimiet",
+                    "fr": "Limite de redémarrage",
+                    "it": "Limite di riavvio",
+                    "es": "Límite de reinicio",
+                    "pl": "Limit ponownego uruchomienia",
+                    "uk": "Ліміт перезапуску",
+                    "zh-cn": "重启限制"
+                },
+                "type": "string",
+                "role": "json",
+                "desc": "Create by Adapter",
+                "read": true,
+                "write": false
+            },
+            "native": {}
+        }
+    ]
 }
