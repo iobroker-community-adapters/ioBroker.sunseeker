@@ -396,6 +396,31 @@
             "native": {}
         },
         {
+            "_id": "auth.mqtt_count",
+            "type": "state",
+            "common": {
+                "name": {
+                    "en": "MQTT reconnection counter",
+                    "de": "MQTT-Wiederverbindungszähler",
+                    "ru": "Счетчик повторных подключений MQTT",
+                    "pt": "contador de reconexão MQTT",
+                    "nl": "MQTT-herverbindingsteller",
+                    "fr": "compteur de reconnexion MQTT",
+                    "it": "contatore di riconnessione MQTT",
+                    "es": "Contador de reconexión MQTT",
+                    "pl": "Licznik ponownego połączenia MQTT",
+                    "uk": "Лічильник перепідключень MQTT",
+                    "zh-cn": "MQTT 重连计数器"
+                },
+                "type": "string",
+                "role": "json",
+                "desc": "Create by Adapter",
+                "read": true,
+                "write": false
+            },
+            "native": {}
+        },
+        {
             "_id": "rateLimit.restart",
             "type": "state",
             "common": {

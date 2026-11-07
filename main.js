@@ -216,6 +216,7 @@ class SunseekerAdapter extends utils.Adapter {
         this.sunseeker.on("own", payload => this.onSunseekerOwn(payload));
         this.sunseeker.on("mqtt_auth", payload => this.onSunseekerMqttAuth(payload));
         this.sunseeker.on("mqtt_status", (objectId, val) => this.onSunseekerMqttStatus(objectId, val));
+        this.sunseeker.on("mqtt_counter", payload => this.onSunseekerMqttCounter(payload));
         this.sunseeker.on("session", payload => this.onSunseekerSession(payload));
         this.sunseeker.on("mode", payload => this.onSunseekerScheduleMode(payload));
         this.sunseeker.on("fence", payload => this.onSunseekerFenceSettings(payload));
@@ -606,6 +607,13 @@ class SunseekerAdapter extends utils.Adapter {
             null,
             null,
         );
+    }
+
+    /**
+     * @param {any} payload
+     */
+    async onSunseekerMqttCounter(payload) {
+        await this.setState(`auth.mqtt_count`, { val: JSON.stringify(payload), ack: true });
     }
 
     async onSunseekerInfoTheft({ sn, theft }) {
