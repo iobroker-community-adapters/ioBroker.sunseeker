@@ -105,6 +105,7 @@ declare class Sunseeker extends EventEmitter {
     changeEmail(data: Mail): Promise<boolean>;
     getGmtOffset(latitude: number, longitude: number): GMT | null;
     setCountry(data: string): Promise<boolean>;
+    registerIoBroker(): Promise<boolean>;
 
     // devices.js
     loadEventCodes(language: string): void;
