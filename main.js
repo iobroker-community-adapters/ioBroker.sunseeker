@@ -773,7 +773,6 @@ class SunseekerAdapter extends utils.Adapter {
         for (const d of devices.records) {
             const sn = d.deviceSn.replace(this.FORBIDDEN_CHARS, "_");
             const cleanup = this.removeNull(d);
-            const states = this.statesForDevice(sn);
             if (cleanup.ownerAppUserId) {
                 const data = {
                     ownerAppUserId: cleanup.ownerAppUserId,
@@ -793,10 +792,6 @@ class SunseekerAdapter extends utils.Adapter {
                         "zh-cn": "所有数据均来自云端和 MQTT",
                     },
                     forceIndex: true,
-                    roles: objectName.MOWER_RAW_MQTT_ROLES,
-                    units: objectName.MOWER_RAW_MQTT_UNITS,
-                    descriptions: objectName.MOWER_RAW_MQTT,
-                    states,
                 });
             }
         }
@@ -989,6 +984,7 @@ class SunseekerAdapter extends utils.Adapter {
             }
             path = `${sn}.mower_raw`;
             const cleanup = this.removeNull(d);
+            const states = this.statesForDevice(sn);
             if (cleanup.multi_zigzag_angles) {
                 delete cleanup.multi_zigzag_angles;
             }
@@ -1016,6 +1012,7 @@ class SunseekerAdapter extends utils.Adapter {
                 roles: objectName.MOWER_RAW_MQTT_ROLES,
                 units: objectName.MOWER_RAW_MQTT_UNITS,
                 descriptions: objectName.MOWER_RAW_MQTT,
+                states,
             });
             if (!this.createObjectDone[path] && this.sunseeker) {
                 this.createObjectDone[path] = true;
@@ -2041,7 +2038,6 @@ class SunseekerAdapter extends utils.Adapter {
             forceIndex: true,
             roles: objectName.MOWER_RAW_MQTT_ROLES,
             units: objectName.MOWER_RAW_MQTT_UNITS,
-            states: this.statesForDevice(sn),
             descriptions: objectName.MOWER_RAW_MQTT,
         });
     }
