@@ -27,7 +27,7 @@
     "geo-tz": "^8.1.11",
     "json2iob": "^2.6.28",
     "moment-timezone": "^0.6.6",
-    "mqtt": "^5.16.0",
+    "mqtt": "^5.16.1",
     "pureimage": "^0.4.20"
   },
   "devDependencies": {
