@@ -25,7 +25,7 @@
     "@iobroker/adapter-core": "^3.4.3",
     "axios": "^1.20.0",
     "geo-tz": "^8.1.10",
-    "json2iob": "^2.6.27",
+    "json2iob": "^2.6.28",
     "moment-timezone": "^0.6.6",
     "mqtt": "^5.16.0",
     "pureimage": "^0.4.20"
