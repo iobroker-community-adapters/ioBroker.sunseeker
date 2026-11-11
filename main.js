@@ -967,7 +967,7 @@ class SunseekerAdapter extends utils.Adapter {
                             `${this.namespace}.${sn}.map.livemap_update`,
                             common,
                             "state",
-                            null,
+                            false,
                             null,
                             null,
                         );

@@ -736,7 +736,6 @@ If any settings are missing, please open an issue or ask in the forum.
 | xxx.mower_raw.elec                   | Battery level                                                   |
 | xxx.mower_raw.event_code             | Last event                                                      |
 | xxx.mower_raw.id                     | ID for MQTT message mapping                                     |
-| xxx.mower_raw.iobroker_sid           | Created by the adapter; required for the live map               |
 | xxx.mower_raw.key                    | Key for MQTT message mapping                                    |
 | xxx.mower_raw.net_4g_sig             | 4G signal strength                                              |
 | xxx.mower_raw.path                   | Current path (required for the live map)                        |
@@ -918,6 +917,7 @@ If any settings are missing, please open an issue or ask in the forum.
 | auth.mqtt_connected_V1  | MQTT connection status for V1 model                                 |
 | auth.mqtt_connected_old | MQTT connection status for wired mowers                             |
 | auth.mqtt_connection    | Access credentials for the MQTT connection                          |
+| auth.mqtt_count         | Count MQTT reconnections following an adapter restart               |
 | auth.session            | Access credentials for the cloud connection                         |
 
 ![auth.png](img/auth.png)

@@ -173,6 +173,7 @@ declare class Sunseeker extends EventEmitter {
     checkAppUpdate(type: string, version: string): Promise<boolean>;
     deleteMessages(ids: string[]): Promise<boolean>;
     setProfile(sn: string): Promise<boolean>;
+    createUploadMap(sn: string, ts: date, data: any): string;
 
     // mqttV1.js
     connectMqttV1(): void;

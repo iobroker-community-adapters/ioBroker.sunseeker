@@ -702,47 +702,46 @@ Wenn Einstellungen fehlen, dann bitte ein Issue anlegen oder im Forum anfragen.
 
 `Hier werden nur einige Objekte beschrieben`
 
-| Objekt-ID                            | Beschreibung                                                |
-| ------------------------------------ | ----------------------------------------------------------- |
-| xxx.mower_raw.blade                  | Klingeneinstellungen (MQTT)                                 |
-| xxx.mower_raw.charge_pos             | Position Ladestation (MQTT)                                 |
-| xxx.mower_raw.consumable_items       | Verbrauchsmaterial (MQTT)                                   |
-| xxx.mower_raw.file_17                | Neue Pfaddatei hochgeladen (MQTT)                           |
-| xxx.mower_raw.file_7                 | Neue Kartendatei hochgeladen (MQTT)                         |
-| xxx.mower_raw.current_work_param     | Aktuelle Arbeitsparameter (MQTT)                            |
-| xxx.mower_raw.mcu_ver                | Mikrocontroller-Einheit (MQTT)                              |
-| xxx.mower_raw.mow_efficiency         | Mähleistung (MQTT)                                          |
-| xxx.mower_raw.current_file           | Aktuelle Pfaddatei (MQTT)                                   |
-| xxx.mower_raw.path_info              | Aktuelle Anzahl der Points vom Mähverlauf (MQTT+GPS)        |
-| xxx.mower_raw.notice                 | Letzte Nachricht (MQTT)                                     |
-| xxx.mower_raw.rain                   | Regeneinstellung (MQTT)                                     |
-| xxx.mower_raw.robot_pos              | Mäherposition (MQTT)                                        |
-| xxx.mower_raw.rtk_pos                | Echtzeitkinematik-Positionierung (MQTT)                     |
-| xxx.mower_raw.schedule_info          | Letzter geänderter Timeslot (MQTT)                          |
-| xxx.mower_raw.support_custom_pattern | Alle möglichen Muster (MQTT)                                |
-| xxx.mower_raw.appUserId              | Benutzer-ID                                                 |
-| xxx.mower_raw.auto_upgrade           | Automatische Firmwareaktualisierung an/aus                  |
-| xxx.mower_raw.backup_map_amount      | Anzahl der Backup-Maps                                      |
-| xxx.mower_raw.base_sn                | Seriennummer der Ladestation                                |
-| xxx.mower_raw.bindAntiTheftId        | ID vom 4G- oder GPS-Modul                                   |
-| xxx.mower_raw.bladeHeight            | Klingenhöhe                                                 |
-| xxx.mower_raw.bladeSpeed             | Klingengeschwindigkeit                                      |
-| xxx.mower_raw.camera_sn              | Seriennummer der Kamera                                     |
-| xxx.mower_raw.camera_temp            | Temperatur der Kamera                                       |
-| xxx.mower_raw.code                   | Antwort Cloud 0=Alles OK >0=Fehler                          |
-| xxx.mower_raw.dev_model              | Mähermodell                                                 |
-| xxx.mower_raw.dev_name               | Name vom Mäher                                              |
-| xxx.mower_raw.deviceId               | Mäher-ID                                                    |
-| xxx.mower_raw.deviceSn               | Seriennummer vom Mäher                                      |
-| xxx.mower_raw.elec                   | Batterielevel                                               |
-| xxx.mower_raw.event_code             | Letztes Event                                               |
-| xxx.mower_raw.id                     | ID Zuordnung der Messages über MQTT                         |
-| xxx.mower_raw.iobroker_sid           | Wird vom Adapter erstellt und wird für die Livemap benötigt |
-| xxx.mower_raw.key                    | Key Zuordnung der Messages über MQTT                        |
-| xxx.mower_raw.net_4g_sig             | 4G-Signalstärke                                             |
-| xxx.mower_raw.path                   | Aktueller Path -> wird für die Livemap benötigt             |
-| xxx.mower_raw.sid                    | SID von der APP für die Livemap                             |
-| xxx.mower_raw.soc_temp               | Ladezustandstemperatur                                      |
+| Objekt-ID                            | Beschreibung                                         |
+| ------------------------------------ | ---------------------------------------------------- |
+| xxx.mower_raw.blade                  | Klingeneinstellungen (MQTT)                          |
+| xxx.mower_raw.charge_pos             | Position Ladestation (MQTT)                          |
+| xxx.mower_raw.consumable_items       | Verbrauchsmaterial (MQTT)                            |
+| xxx.mower_raw.file_17                | Neue Pfaddatei hochgeladen (MQTT)                    |
+| xxx.mower_raw.file_7                 | Neue Kartendatei hochgeladen (MQTT)                  |
+| xxx.mower_raw.current_work_param     | Aktuelle Arbeitsparameter (MQTT)                     |
+| xxx.mower_raw.mcu_ver                | Mikrocontroller-Einheit (MQTT)                       |
+| xxx.mower_raw.mow_efficiency         | Mähleistung (MQTT)                                   |
+| xxx.mower_raw.current_file           | Aktuelle Pfaddatei (MQTT)                            |
+| xxx.mower_raw.path_info              | Aktuelle Anzahl der Points vom Mähverlauf (MQTT+GPS) |
+| xxx.mower_raw.notice                 | Letzte Nachricht (MQTT)                              |
+| xxx.mower_raw.rain                   | Regeneinstellung (MQTT)                              |
+| xxx.mower_raw.robot_pos              | Mäherposition (MQTT)                                 |
+| xxx.mower_raw.rtk_pos                | Echtzeitkinematik-Positionierung (MQTT)              |
+| xxx.mower_raw.schedule_info          | Letzter geänderter Timeslot (MQTT)                   |
+| xxx.mower_raw.support_custom_pattern | Alle möglichen Muster (MQTT)                         |
+| xxx.mower_raw.appUserId              | Benutzer-ID                                          |
+| xxx.mower_raw.auto_upgrade           | Automatische Firmwareaktualisierung an/aus           |
+| xxx.mower_raw.backup_map_amount      | Anzahl der Backup-Maps                               |
+| xxx.mower_raw.base_sn                | Seriennummer der Ladestation                         |
+| xxx.mower_raw.bindAntiTheftId        | ID vom 4G- oder GPS-Modul                            |
+| xxx.mower_raw.bladeHeight            | Klingenhöhe                                          |
+| xxx.mower_raw.bladeSpeed             | Klingengeschwindigkeit                               |
+| xxx.mower_raw.camera_sn              | Seriennummer der Kamera                              |
+| xxx.mower_raw.camera_temp            | Temperatur der Kamera                                |
+| xxx.mower_raw.code                   | Antwort Cloud 0=Alles OK >0=Fehler                   |
+| xxx.mower_raw.dev_model              | Mähermodell                                          |
+| xxx.mower_raw.dev_name               | Name vom Mäher                                       |
+| xxx.mower_raw.deviceId               | Mäher-ID                                             |
+| xxx.mower_raw.deviceSn               | Seriennummer vom Mäher                               |
+| xxx.mower_raw.elec                   | Batterielevel                                        |
+| xxx.mower_raw.event_code             | Letztes Event                                        |
+| xxx.mower_raw.id                     | ID Zuordnung der Messages über MQTT                  |
+| xxx.mower_raw.key                    | Key Zuordnung der Messages über MQTT                 |
+| xxx.mower_raw.net_4g_sig             | 4G-Signalstärke                                      |
+| xxx.mower_raw.path                   | Aktueller Path -> wird für die Livemap benötigt      |
+| xxx.mower_raw.sid                    | SID von der APP für die Livemap                      |
+| xxx.mower_raw.soc_temp               | Ladezustandstemperatur                               |
 
 ![mower_raw_1.png](img/mower_raw_1.png)
 ![mower_raw_2.png](img/mower_raw_2.png)
@@ -919,6 +918,7 @@ Wenn Einstellungen fehlen, dann bitte ein Issue anlegen oder im Forum anfragen.
 | auth.mqtt_connected_V1  | Status MQTT-Verbindung für V1 Modell                                          |
 | auth.mqtt_connected_old | Status MQTT-Verbindung für Mäher mit Kabel                                    |
 | auth.mqtt_connection    | Zugangsdaten für die MQTT-Verbindung                                          |
+| auth.mqtt_count         | MQTT-Wiederverbindungen nach einem Adapter-Neustart zählen                    |
 | auth.session            | Zugangsdaten für die Cloud Verbindung                                         |
 
 ![auth.png](img/auth.png)
