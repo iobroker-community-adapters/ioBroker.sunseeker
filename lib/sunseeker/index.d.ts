@@ -245,6 +245,8 @@ declare class Sunseeker extends EventEmitter {
 
     // error.js
     errorStates(model: string, lang: string): void;
+    statusStatesV1(lang: string): any;
+    statusStates(lang: string): any;
 }
 
 export = Sunseeker;

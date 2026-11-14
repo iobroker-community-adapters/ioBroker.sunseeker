@@ -80,6 +80,7 @@ class SunseekerAdapter extends utils.Adapter {
         //ToDo Wrong start_reason & end_reason
         //ToDo Other interval for getDevAllProperty
         //ToDo Add Pattern size
+        //ToDo states for algo_status -> status event 2
         this.setState("info.connection", false, true);
 
         const resCount = await this.getStateAsync(`rateLimit.restart`);
@@ -498,43 +499,9 @@ class SunseekerAdapter extends utils.Adapter {
         const fault = this.sunseeker.errorStates(meta.model, lang);
         let states = {};
         if (meta.modelClass === "V1") {
-            states = {
-                0: "Idle",
-                1: "Mowing",
-                2: "Going home",
-                3: "Charging",
-                4: "Error",
-                5: "Robot locked",
-                6: "Firmware update",
-                7: "Edge Cutting",
-                8: "Emergency Stop",
-                9: "Confirming Boundary",
-                10: "Idle",
-            };
+            states = this.sunseeker.statusStatesV1(lang);
         } else {
-            states = {
-                0: "Idle",
-                1: "Idle",
-                2: "Working",
-                3: "Work Pause",
-                4: "build_map_status",
-                5: "Mapping paused",
-                6: "Error",
-                7: "Return",
-                8: "Recharge Pause",
-                9: "Charging",
-                10: "Charging full",
-                11: "Remote Control",
-                12: "Sleep",
-                13: "Shutdown",
-                14: "Leaving charging station",
-                15: "Location",
-                16: "Firmware update",
-                17: "Awaiting escape",
-                18: "Emergency Stop",
-                19: "Confirming Boundary",
-                20: "Robot locked",
-            };
+            states = this.sunseeker.statusStates(lang);
         }
         this.states[sn] = {
             event_code: { ...events },
