@@ -123,6 +123,7 @@ The Sunseeker API exposes far more fields than the adapter currently writes. All
 - (Lucky-ESA) Adaptation for the S5-Gen-2 mower
 - (Lucky-ESA) Mirroring of App version 1.9.0 regarding new mqtt url, AppId register, Topic and clientId
 - (Lucky-ESA) Added Power-off Sleep setting
+- (Lucky-ESA) Added fault states
 
 ### 0.0.5 (2026-10-24)
 

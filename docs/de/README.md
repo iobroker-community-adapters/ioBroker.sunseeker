@@ -742,6 +742,10 @@ Wenn Einstellungen fehlen, dann bitte ein Issue anlegen oder im Forum anfragen.
 | xxx.mower_raw.path                   | Aktueller Path -> wird für die Livemap benötigt      |
 | xxx.mower_raw.sid                    | SID von der APP für die Livemap                      |
 | xxx.mower_raw.soc_temp               | Ladezustandstemperatur                               |
+| xxx.mower_raw.status                 | Mäherstatus                                          |
+| xxx.mower_raw.fault                  | Mäherfehler                                          |
+| xxx.mower_raw.faultHelpDetails       | Fehlerdetails                                        |
+| xxx.mower_raw.faultHelp              | Fehlerdetails laden                                  |
 
 ![mower_raw_1.png](img/mower_raw_1.png)
 ![mower_raw_2.png](img/mower_raw_2.png)

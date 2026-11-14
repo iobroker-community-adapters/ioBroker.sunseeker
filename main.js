@@ -49,6 +49,7 @@ class SunseekerAdapter extends utils.Adapter {
         this.updateDeviceStateChange = null;
         this.createObjectDone = {};
         this.firstStart = {};
+        this.states = {};
         this.wifi = [];
         this.firstStartTimeout = null;
         this.availableMaps = null;
@@ -240,7 +241,7 @@ class SunseekerAdapter extends utils.Adapter {
         //this.sunseeker.on("settingsX", payload => this.onSunseekerSettingsX(payload));
         //this.sunseeker.on("getTime", payload => this.onSunseekerGetTime(payload));
         //this.sunseeker.on("appRelease", payload => this.onSunseekerAppRelease(payload));
-        //this.sunseeker.on("errorMessage", payload => this.onSunseekerErrorMessage(payload));
+        this.sunseeker.on("errorMessage", payload => this.onSunseekerErrorMessage(payload));
 
         this.subscribeStates("*");
 
@@ -474,6 +475,12 @@ class SunseekerAdapter extends utils.Adapter {
         }
     }
 
+    async onSunseekerErrorMessage({ sn, data }) {
+        if (this.createObjectDone[`${sn}.mower_raw.faultHelpDetails`]) {
+            await this.setState(`${sn}.mower_raw.faultHelpDetails`, { val: JSON.stringify(data), ack: true });
+        }
+    }
+
     /**
      * States for Device
      *
@@ -483,39 +490,61 @@ class SunseekerAdapter extends utils.Adapter {
         if (!this.sunseeker) {
             return { errortype: { ...ERRORTYPE_LABELS } };
         }
+        const lang = String(this.config.language || "de")
+            .toLowerCase()
+            .slice(0, 2);
         const meta = this.sunseeker.deviceMeta[sn];
         const events = this.sunseeker.getEventCodes(meta && meta.modelClass);
-        const states = {
-            0: `${meta && (meta.modelClass === "X" || meta.modelClass === "S") ? "unknown" : "standby"}`,
-            1: `${meta && (meta.modelClass === "X" || meta.modelClass === "S") ? "idle" : "mowing"}`,
-            2: `${meta && (meta.modelClass === "X" || meta.modelClass === "S") ? "working" : "going home"}`,
-            3: `${meta && (meta.modelClass === "X" || meta.modelClass === "S") ? "pause" : "charging"}`,
-            4: "unknown",
-            5: "unknown",
-            6: "error",
-            7: `${meta && (meta.modelClass === "X" || meta.modelClass === "S") ? "return" : "mowing border"}`,
-            8: "pause",
-            9: "charging",
-            10: "charging full",
-            11: "unknown",
-            12: "unknown",
-            13: "offline",
-            14: "continue cutting",
-            15: "location",
-            16: "firmware update",
-            17: "stuck",
-            18: "stop",
-            19: "unknown",
-            20: "enter pin",
-        };
-        return {
+        const fault = this.sunseeker.errorStates(meta.model, lang);
+        let states = {};
+        if (meta.modelClass === "V1") {
+            states = {
+                0: "Idle",
+                1: "Mowing",
+                2: "Going home",
+                3: "Charging",
+                4: "Error",
+                5: "Robot locked",
+                6: "Firmware update",
+                7: "Edge Cutting",
+                8: "Emergency Stop",
+                9: "Confirming Boundary",
+                10: "Idle",
+            };
+        } else {
+            states = {
+                0: "Idle",
+                1: "Idle",
+                2: "Working",
+                3: "Work Pause",
+                4: "build_map_status",
+                5: "Mapping paused",
+                6: "Error",
+                7: "Return",
+                8: "Recharge Pause",
+                9: "Charging",
+                10: "Charging full",
+                11: "Remote Control",
+                12: "Sleep",
+                13: "Shutdown",
+                14: "Leaving charging station",
+                15: "Location",
+                16: "Firmware update",
+                17: "Awaiting escape",
+                18: "Emergency Stop",
+                19: "Confirming Boundary",
+                20: "Robot locked",
+            };
+        }
+        this.states[sn] = {
             event_code: { ...events },
             errortype: { ...ERRORTYPE_LABELS },
-            fault: { ...ERRORTYPE_LABELS },
+            fault: fault,
             status: states,
             relo_status: LOC_STATUS,
             algo_status: ALGO_STATUS,
         };
+        return this.states[sn];
     }
 
     /**
@@ -804,6 +833,7 @@ class SunseekerAdapter extends utils.Adapter {
         let common;
         for (const d of devices) {
             const sn = d.deviceSn.replace(this.FORBIDDEN_CHARS, "_");
+            const meta = this.sunseeker?.deviceMeta[sn];
             this.patternTimeout[sn] = null;
             this.regionId[sn] = [];
             if (!this.regionsCounter[sn]) {
@@ -832,7 +862,6 @@ class SunseekerAdapter extends utils.Adapter {
                     await this.sunseeker.ensureScheduleStates(sn);
                 }
                 await this.sunseeker.createSettingsFW(sn);
-                const meta = this.sunseeker.deviceMeta[sn];
                 if (meta && (meta.modelClass === "S" || d.modelClass === "X")) {
                     path = `${sn}.map`;
                     if (!this.createObjectDone[path]) {
@@ -984,7 +1013,7 @@ class SunseekerAdapter extends utils.Adapter {
             }
             path = `${sn}.mower_raw`;
             const cleanup = this.removeNull(d);
-            const states = this.statesForDevice(sn);
+            const states = this.states[sn] ? this.states[sn] : this.statesForDevice(sn);
             if (cleanup.multi_zigzag_angles) {
                 delete cleanup.multi_zigzag_angles;
             }
@@ -1042,6 +1071,73 @@ class SunseekerAdapter extends utils.Adapter {
                     null,
                 );
             }
+            if (meta && (meta.modelClass === "S" || d.modelClass === "X")) {
+                path = `${sn}.mower_raw.faultHelp`;
+                if (!this.createObjectDone[path] && this.sunseeker) {
+                    this.createObjectDone[path] = true;
+                    common = {
+                        name: {
+                            en: "Load error details",
+                            de: "Fehlerdetails laden",
+                            ru: "Загрузить сведения об ошибке",
+                            pt: "Dados do erro de carga",
+                            nl: "Foutgegevens laden",
+                            fr: "Load error details",
+                            it: "Errore di caricamento",
+                            es: "Cargar detalles del error",
+                            pl: "Wczytaj szczegóły błędu",
+                            uk: "Деталі помилки завантаження",
+                            "zh-cn": "加载错误详情",
+                        },
+                        desc: "Create by Adapter",
+                        type: "boolean",
+                        role: "button",
+                        read: false,
+                        write: true,
+                        def: false,
+                    };
+                    await this.sunseeker.createDataPoint(
+                        `${this.namespace}.${path}`,
+                        common,
+                        "state",
+                        null,
+                        null,
+                        null,
+                    );
+                    path = `${sn}.mower_raw.faultHelpDetails`;
+                    this.createObjectDone[path] = true;
+                    common = {
+                        name: {
+                            en: "Error details",
+                            de: "Fehlerdetails",
+                            ru: "Сведения об ошибке",
+                            pt: "Dados do erro",
+                            nl: "Foutgegevens",
+                            fr: "Détails de l'erreur",
+                            it: "Dati errore",
+                            es: "Detalles del error",
+                            pl: "Szczegóły błędu",
+                            uk: "Подробиці про помилку",
+                            "zh-cn": "错误详情",
+                        },
+                        desc: "Create by Adapter",
+                        type: "string",
+                        role: "json",
+                        read: true,
+                        write: false,
+                        def: "",
+                    };
+                    await this.sunseeker.createDataPoint(
+                        `${this.namespace}.${path}`,
+                        common,
+                        "state",
+                        null,
+                        null,
+                        null,
+                    );
+                }
+            }
+            await this.objectCleanUp(sn);
         }
     }
 
@@ -1697,7 +1793,7 @@ class SunseekerAdapter extends utils.Adapter {
     }
 
     async onSunseekerStatus({ sn, status, settings }) {
-        const states = this.statesForDevice(sn);
+        const states = this.states[sn] ? this.states[sn] : this.statesForDevice(sn);
         if (status) {
             const cleanup = this.removeNull(status);
             await this.setSettings(sn, cleanup);
@@ -2013,6 +2109,16 @@ class SunseekerAdapter extends utils.Adapter {
                 "zh-cn": "所有数据均来自云端和 MQTT",
             },
             forceIndex: true,
+            states: {
+                build_map_status: {
+                    1: "Auto Mapping in progress",
+                    2: "Auto to Target",
+                    3: "Automatic edge mapping",
+                    4: "Automatic exploration mapping",
+                    5: "Remote mapping - Passage",
+                    6: "Remote Mapping",
+                },
+            },
         });
     }
 
@@ -3771,6 +3877,12 @@ class SunseekerAdapter extends utils.Adapter {
                 return;
             }
         }
+        const mowerIdx = parts.indexOf("mower_raw");
+        if (mowerIdx > 0) {
+            if (parts[mowerIdx + 1] === "faultHelp" && state.val) {
+                this.loadHelpDetails(parts[mowerIdx - 1], id);
+            }
+        }
         const eventsIdx = parts.indexOf("events");
         if (eventsIdx > 0) {
             if (parts[eventsIdx + 1] === "eventUpdate") {
@@ -4691,6 +4803,37 @@ class SunseekerAdapter extends utils.Adapter {
         });
         await this.setState(id, { val: false, ack: true });
         this.updateDeviceAfterStateChange(sn);
+    }
+
+    /**
+     * @param {string} sn
+     * @param {string} id
+     */
+    async loadHelpDetails(sn, id) {
+        if (!this.sunseeker) {
+            return;
+        }
+        const meta = this.sunseeker.deviceMeta[sn];
+        if (!meta) {
+            this.log.warn(`${sn}: Missing device meta!`);
+            return;
+        }
+        const nrtk = await this.getStateAsync(`${sn}.mower_raw.nrtk_base`);
+        const fault = await this.getStateAsync(`${sn}.mower_raw.fault`);
+        if (
+            nrtk &&
+            nrtk.val != null &&
+            typeof nrtk.val === "number" &&
+            fault &&
+            fault.val != null &&
+            typeof fault.val === "number" &&
+            fault.val < 0
+        ) {
+            const res = await this.sunseeker.getErrorMessage(sn, "error", fault.val, meta.model, nrtk.val);
+            if (res) {
+                await this.setState(id, { val: false, ack: true });
+            }
+        }
     }
 
     /**
@@ -7178,6 +7321,84 @@ class SunseekerAdapter extends utils.Adapter {
         const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
         return email.length <= 254 && EMAIL_REGEX.test(email);
     }
+
+    /**
+     * Delete all modified objects e.g. autoUpgrade -> auto_upgrade
+     *
+     * @param {string} sn
+     */
+    async objectCleanUp(sn) {
+        const check_object = await this.getObjectAsync(`${sn}.mower_raw.electricity`);
+        if (!check_object) {
+            return;
+        }
+        this.log.info(`Unused object ${sn}.mower_raw.electricity deleted`);
+        await this.delObjectAsync(`${sn}.mower_raw.electricity`, { recursive: true });
+        const objs = [
+            "wirelessDeviceSchedules",
+            "aiRepairMap",
+            "autoUpgrade",
+            "algoStatus",
+            "userId",
+            "ownerAppUserId",
+            "wifiLv",
+            "sn",
+            "buildMapStatus",
+            "ipAddr",
+            "net4gSig",
+            "laterUpgrade",
+            "laterUpgradeFlag",
+            "net4gStatus",
+            "nrtkBase",
+            "oneshotTaskType",
+            "softModel",
+            "taskType",
+            "textureMapFlag",
+            "firmwareVersion",
+            "wirelessFirmwareVersion",
+            "deviceName",
+            "name",
+            "modelName",
+            "deviceModelName",
+            "net4gFlag",
+            "onlineFlag",
+            "deviceOnlineFlag",
+            "filterStatus",
+            "ledFlag",
+            "wirelessTimeZone",
+            "wirelessWorkStatusCode",
+            "workStatusCode",
+            "wirelessFaultStatusCode",
+            "faultStatusCode",
+            "followBorderLaps",
+            "autoRideEdgeMapM",
+            "rechargeMode",
+            "followBorderFreq",
+            "energySavingMode",
+            "rainCountdown",
+            "rainDelayDuration",
+            "rainFlag",
+            "rainStatusCode",
+            "rain_status",
+            "rainDelayLeft",
+            "autoUpgradeFlag",
+            "consumableItemsObject",
+            "scheduleInfoObject",
+            "currentWorkParam",
+            "clientModelName",
+            "daylightTimeFlag",
+            "time",
+            "time_custom",
+        ];
+        for (const obj of objs) {
+            const object = await this.getObjectAsync(`${sn}.mower_raw.${obj}`);
+            if (object) {
+                this.log.info(`Unused object ${sn}.mower_raw.${obj} deleted`);
+                await this.delObjectAsync(`${sn}.mower_raw.${obj}`, { recursive: true });
+            }
+        }
+    }
+    // ToDo Delete old channels
 }
 
 if (require.main !== module) {
