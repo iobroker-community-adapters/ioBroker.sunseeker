@@ -243,10 +243,11 @@ declare class Sunseeker extends EventEmitter {
     timezoneCode(): any;
     getRegionISO(): any;
 
-    // error.js
+    // status.js
     errorStates(model: string, lang: string): void;
     statusStatesV1(lang: string): any;
     statusStates(lang: string): any;
+    mapStatusStates(lang: string): any;
 }
 
 export = Sunseeker;

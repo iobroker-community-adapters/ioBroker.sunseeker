@@ -508,6 +508,7 @@ class SunseekerAdapter extends utils.Adapter {
             errortype: { ...ERRORTYPE_LABELS },
             fault: fault,
             status: states,
+            build_map_status: this.sunseeker.mapStatusStates(lang),
             relo_status: LOC_STATUS,
             algo_status: ALGO_STATUS,
         };
@@ -2077,16 +2078,7 @@ class SunseekerAdapter extends utils.Adapter {
                 "zh-cn": "所有数据均来自云端和 MQTT",
             },
             forceIndex: true,
-            states: {
-                build_map_status: {
-                    1: "Auto Mapping in progress",
-                    2: "Auto to Target",
-                    3: "Automatic edge mapping",
-                    4: "Automatic exploration mapping",
-                    5: "Remote mapping - Passage",
-                    6: "Remote Mapping",
-                },
-            },
+            descriptions: objectName.MOWER_RAW_MQTT,
         });
     }
 
