@@ -1969,6 +1969,7 @@ class SunseekerAdapter extends utils.Adapter {
         if (data.file && typeof data.event_code === "number") {
             const data_file = {};
             data_file[`file_${data.event_code}`] = data;
+            data_file[`event_code`] = data.event_code;
             if (data.event_code == 7 && this.sunseeker) {
                 this.sunseeker
                     .fetchMap(sn)
@@ -2094,6 +2095,7 @@ class SunseekerAdapter extends utils.Adapter {
      * @param {any} data
      */
     setMowerRaw(sn, data) {
+        const states = this.states[sn] ? this.states[sn] : this.statesForDevice(sn);
         this.json2iob.parse(`${sn}.mower_raw`, data, {
             channelName: {
                 en: "All data from cloud and mqtt",
@@ -2112,6 +2114,7 @@ class SunseekerAdapter extends utils.Adapter {
             roles: objectName.MOWER_RAW_MQTT_ROLES,
             units: objectName.MOWER_RAW_MQTT_UNITS,
             descriptions: objectName.MOWER_RAW_MQTT,
+            states,
         });
     }
 
